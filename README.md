@@ -25,7 +25,7 @@ Download `Ledger.exe` and double-click it. A local server starts on `127.0.0.1:3
 Requires [Go](https://go.dev/dl/) 1.21+.
 
 ```bash
-git clone https://github.com/<your-username>/ledger.git
+git clone https://github.com/Noobmaster-3443/ledger.git
 cd ledger
 go run .
 ```
