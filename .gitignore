@@ -1,8 +1,0 @@
-# Built binaries — publish these via GitHub Releases instead of committing them
-*.exe
-Ledger
-ledger
-
-# OS cruft
-.DS_Store
-Thumbs.db
