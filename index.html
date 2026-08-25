@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ledger — Personal Finance Tracker · THB</title>
+
+<!-- Fonts: modern clean sans-serif -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Tailwind (Play CDN) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: {
+          display: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+          body: ['Inter', 'sans-serif'],
+          mono: ['Inter', 'sans-serif'],
+        },
+        colors: {
+          ink: 'var(--ink)',
+          'ink-muted': 'var(--ink-muted)',
+          canvas: 'var(--canvas)',
+          surface: 'var(--surface)',
+          'surface-2': 'var(--surface-2)',
+          hairline: 'var(--hairline)',
+          gold: 'var(--gold)',
+          income: 'var(--income)',
+          expense: 'var(--expense)',
+        },
+        borderRadius: { card: '14px' },
+      }
+    }
+  }
+</script>
+
+<!-- Chart.js for the category pie chart -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+<style>
+  /* ============ Design tokens (ledger-book palette) ============ */
+  :root{
+    --canvas:#F7F7F4;
+    --surface:#FFFFFF;
+    --surface-2:#F0EFEA;
+    --hairline:#E1DFD7;
+    --ink:#171B1F;
+    --ink-muted:#6B6F72;
+    --gold:#B8892B;
+    --income:#1F8A5F;
+    --expense:#C2483D;
+    --shadow: 0 1px 2px rgba(23,27,31,0.04), 0 8px 24px -12px rgba(23,27,31,0.12);
+  }
+  html.dark{
+    --canvas:#0D1116;
+    --surface:#151A20;
+    --surface-2:#1B212A;
+    --hairline:#272E37;
+    --ink:#EAEBEA;
+    --ink-muted:#8C929B;
+    --gold:#D9A94A;
+    --income:#3EBE87;
+    --expense:#E2685C;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 28px -12px rgba(0,0,0,0.5);
+  }
+  body{ background:var(--canvas); color:var(--ink); }
+
+  /* Tabular ledger figures everywhere money appears */
+  .figure{ font-family:'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; letter-spacing:-0.01em; }
+
+  /* Faint ruled-paper texture used behind summary cards — the ledger signature */
+  .ruled{
+    background-image: repeating-linear-gradient(
+      to bottom, transparent, transparent 27px, var(--hairline) 27px, var(--hairline) 28px
+    );
+    background-position: 0 38px;
+  }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--hairline);
+    border-radius:14px;
+    box-shadow:var(--shadow);
+  }
+
+  /* Perforated / receipt-tear edge on the transaction list header, ledger motif */
+  .perforated{ position:relative; }
+  .perforated::before{
+    content:"";
+    position:absolute; left:0; right:0; top:-1px; height:1px;
+    background-image: repeating-linear-gradient(to right, var(--hairline) 0 6px, transparent 6px 12px);
+  }
+
+  ::selection{ background: var(--gold); color:#171B1F; }
+
+  /* Smooth theme + interactive transitions, kept restrained */
+  * { transition: background-color .18s ease, border-color .18s ease, color .18s ease; }
+  .no-transition, .no-transition * { transition: none !important; }
+
+  input, select, textarea{ background:var(--surface-2); border:1px solid var(--hairline); color:var(--ink); }
+  input:focus, select:focus, textarea:focus{ outline:2px solid var(--gold); outline-offset:1px; border-color:transparent; }
+  button:focus-visible, a:focus-visible, [tabindex]:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+
+  /* Custom scrollbar, subtle */
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb{ background:var(--hairline); border-radius:8px; }
+
+  /* Tab underline */
+  .tab-btn{ position:relative; }
+  .tab-btn[data-active="true"]{ color:var(--ink); }
+  .tab-btn[data-active="true"]::after{
+    content:""; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--gold); border-radius:2px;
+  }
+  .tab-btn[data-active="false"]{ color:var(--ink-muted); }
+
+  /* Modal */
+  .modal-backdrop{ background:rgba(13,17,22,0.5); backdrop-filter: blur(2px); }
+  .modal-panel{ animation: pop .16s ease-out; }
+  @keyframes pop{ from{ opacity:0; transform:translateY(6px) scale(.98);} to{ opacity:1; transform:translateY(0) scale(1);} }
+
+  .row-enter{ animation: fadein .18s ease-out; }
+  @keyframes fadein{ from{ opacity:0; transform:translateY(2px);} to{ opacity:1; transform:translateY(0);} }
+
+  .stamp{
+    border:2px solid var(--gold); color:var(--gold);
+    border-radius:9999px; transform:rotate(-4deg);
+  }
+
+  /* Toast */
+  #toast{ transition: opacity .25s ease, transform .25s ease; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; transition:none !important; }
+  }
+
+  /* ================================================================
+     LIQUID GLASS — iOS 26 CONCEPT THEME
+     ================================================================ */
+  :root{
+    --canvas:#07111b;
+    --surface:rgba(255,255,255,.085);
+    --surface-2:rgba(255,255,255,.075);
+    --hairline:rgba(255,255,255,.16);
+    --ink:#f6fbff;
+    --ink-muted:rgba(231,241,249,.68);
+    --gold:#ffd86a;
+    --income:#45f2a1;
+    --expense:#ff6f78;
+    --cyan:#62e9ff;
+    --glass-hi:rgba(255,255,255,.26);
+    --shadow:0 24px 70px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.16);
+  }
+  html.dark{ --canvas:#07111b; --surface:rgba(255,255,255,.085); --surface-2:rgba(255,255,255,.075); --hairline:rgba(255,255,255,.16); --ink:#f6fbff; --ink-muted:rgba(231,241,249,.68); --gold:#ffd86a; --income:#45f2a1; --expense:#ff6f78; }
+  html:not(.dark){ --canvas:#dcecff; --surface:rgba(255,255,255,.48); --surface-2:rgba(255,255,255,.38); --hairline:rgba(255,255,255,.72); --ink:#102030; --ink-muted:rgba(16,32,48,.62); --gold:#b68114; --income:#087f54; --expense:#c94152; }
+  html,body{ min-height:100%; }
+  body{
+    position:relative; overflow-x:hidden;
+    background:var(--canvas);
+    font-family:'Plus Jakarta Sans','Inter',system-ui,sans-serif;
+    color:var(--ink);
+  }
+  body::before, body::after{
+    content:""; position:fixed; z-index:-2; pointer-events:none;
+    width:55vw; height:55vw; border-radius:50%; filter:blur(70px); opacity:.48;
+    animation:liquidFloat 18s ease-in-out infinite alternate;
+  }
+  body::before{ left:-18vw; top:-16vw; background:radial-gradient(circle at 40% 40%,#5b5cff 0,rgba(91,92,255,.2) 34%,transparent 68%),radial-gradient(circle at 70% 70%,#00e5ff 0,transparent 62%); }
+  body::after{ right:-20vw; bottom:-20vw; background:radial-gradient(circle at 35% 35%,#ff4fa3 0,rgba(255,79,163,.18) 35%,transparent 66%),radial-gradient(circle at 70% 60%,#ffd95c 0,transparent 60%); animation-delay:-8s; }
+  @keyframes liquidFloat{ from{transform:translate3d(-2%,1%,0) scale(1)} to{transform:translate3d(4%,-3%,0) scale(1.08)} }
+  .figure{ font-family:'Inter',sans-serif; font-variant-numeric:tabular-nums; letter-spacing:-.03em; }
+  .card{
+    position:relative; overflow:hidden;
+    background:linear-gradient(135deg,rgba(255,255,255,.15),rgba(255,255,255,.055));
+    border:1px solid rgba(255,255,255,.19); border-radius:24px;
+    box-shadow:var(--shadow); backdrop-filter:blur(24px) saturate(145%); -webkit-backdrop-filter:blur(24px) saturate(145%);
+  }
+  .card::before{
+    content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit;
+    background:linear-gradient(115deg,rgba(255,255,255,.22),transparent 22%,transparent 70%,rgba(255,255,255,.08));
+    mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0); mask-composite:exclude; padding:1px;
+  }
+  .ruled{ background-image:linear-gradient(115deg,rgba(255,255,255,.08),transparent 55%); }
+  header{
+    background:rgba(8,18,28,.48)!important; border-color:rgba(255,255,255,.14)!important;
+    backdrop-filter:blur(28px) saturate(160%); -webkit-backdrop-filter:blur(28px) saturate(160%);
+    box-shadow:0 12px 40px rgba(0,0,0,.14);
+  }
+  .stamp{ border:1px solid rgba(255,255,255,.26); color:var(--cyan); background:rgba(255,255,255,.08); box-shadow:inset 0 1px rgba(255,255,255,.25),0 0 30px rgba(98,233,255,.12); transform:none; border-radius:14px; }
+  h1,.font-display{ font-family:'Plus Jakarta Sans','Inter',sans-serif!important; }
+  button,.tab-btn,input,select,textarea{ font-family:inherit; }
+  button{
+    transition:transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease, color .18s ease!important;
+  }
+  button:hover{ transform:translateY(-1px); }
+  button:active{ transform:translateY(0) scale(.98); }
+  input,select,textarea{
+    background:rgba(255,255,255,.075)!important; border:1px solid rgba(255,255,255,.16)!important; border-radius:14px!important;
+    backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); box-shadow:inset 0 1px rgba(255,255,255,.08);
+  }
+  /* Native dropdown fix: keep option text readable in both themes. */
+  html.dark select{ color-scheme:dark; }
+  html:not(.dark) select{ color-scheme:light; }
+  select option, select optgroup{
+    color:var(--ink)!important;
+    background:var(--surface-2)!important;
+  }
+  html.dark select option, html.dark select optgroup{
+    color:#f6fbff!important;
+    background:#151c25!important;
+  }
+  html:not(.dark) select option, html:not(.dark) select optgroup{
+    color:#102030!important;
+    background:#f4f7fb!important;
+  }
+
+  input:focus,select:focus,textarea:focus{ outline:none!important; border-color:rgba(98,233,255,.72)!important; box-shadow:0 0 0 3px rgba(98,233,255,.12),0 0 26px rgba(98,233,255,.08); }
+  .modal-backdrop{ background:rgba(1,7,13,.55)!important; backdrop-filter:blur(18px) saturate(140%)!important; }
+  .modal-panel{ background:rgba(17,28,41,.72)!important; border:1px solid rgba(255,255,255,.18)!important; border-radius:28px!important; box-shadow:0 30px 90px rgba(0,0,0,.42),inset 0 1px rgba(255,255,255,.18)!important; backdrop-filter:blur(30px) saturate(150%)!important; -webkit-backdrop-filter:blur(30px) saturate(150%)!important; }
+  .tab-btn[data-active="true"]{ color:var(--ink); }
+  .tab-btn[data-active="true"]::after{ background:linear-gradient(90deg,var(--cyan),var(--gold)); height:3px; box-shadow:0 0 14px rgba(98,233,255,.6); }
+  .tab-btn[data-active="false"]{ color:var(--ink-muted); }
+  .row-enter:hover{ background:rgba(255,255,255,.07)!important; }
+  #toast{ background:rgba(18,31,45,.8)!important; border:1px solid rgba(255,255,255,.18)!important; box-shadow:0 18px 50px rgba(0,0,0,.28); backdrop-filter:blur(22px); }
+  ::-webkit-scrollbar-thumb{ background:linear-gradient(var(--cyan),var(--gold)); }
+  .glass-button{ background:linear-gradient(135deg,rgba(255,255,255,.18),rgba(255,255,255,.07)); border:1px solid rgba(255,255,255,.22); box-shadow:inset 0 1px rgba(255,255,255,.2),0 8px 24px rgba(0,0,0,.12); backdrop-filter:blur(18px); }
+  .wallet-card{ position:relative; overflow:hidden; background:linear-gradient(135deg,rgba(255,255,255,.15),rgba(255,255,255,.055)); border:1px solid rgba(255,255,255,.18); border-radius:20px; padding:18px; }
+  .wallet-card.bank{ box-shadow:inset 0 1px rgba(255,255,255,.18),0 0 35px rgba(98,233,255,.08); }
+  .wallet-card.savings{ box-shadow:inset 0 1px rgba(255,255,255,.18),0 0 35px rgba(216,169,74,.08); }
+  .wallet-badge{ width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.15); }
+  .modal-panel{ overflow:visible!important; }
+
+  @media (prefers-reduced-motion:reduce){ body::before,body::after{animation:none!important;} }
+
+</style>
+</head>
+
+<body class="font-body min-h-screen">
+
+<!-- ============================= HEADER ============================= -->
+<header class="sticky top-0 z-30 backdrop-blur border-b" style="border-color:var(--hairline); background:color-mix(in srgb, var(--canvas) 88%, transparent);">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <div class="stamp w-10 h-10 flex items-center justify-center font-display font-semibold text-sm shrink-0">฿</div>
+      <div>
+        <h1 class="font-display font-semibold text-lg sm:text-xl leading-none">Ledger</h1>
+        <p class="text-[11px] text-ink-muted mt-0.5 hidden sm:block">Personal finance, kept honestly</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button id="exportCsvBtn" title="Export all transactions to CSV"
+        class="hidden sm:flex items-center gap-1.5 text-sm px-3 py-2 rounded-card border hover:bg-surface-2"
+        style="border-color:var(--hairline);">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 21h16"/></svg>
+        Export CSV
+      </button>
+      <button id="themeToggle" title="Toggle dark / light mode"
+        class="w-9 h-9 flex items-center justify-center rounded-card border hover:bg-surface-2"
+        style="border-color:var(--hairline);">
+        <svg id="iconSun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg id="iconMoon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hidden"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <nav class="max-w-6xl mx-auto px-4 sm:px-6 flex gap-5 text-sm font-medium overflow-x-auto">
+    <button class="tab-btn py-2.5 whitespace-nowrap" data-tab="dashboard" data-active="true">Dashboard</button>
+    <button class="tab-btn py-2.5 whitespace-nowrap" data-tab="transactions" data-active="false">Transactions</button>
+    <button class="tab-btn py-2.5 whitespace-nowrap" data-tab="wallets" data-active="false">Wallets</button>
+    <button class="tab-btn py-2.5 whitespace-nowrap" data-tab="daily" data-active="false">Daily Summary</button>
+    <button class="tab-btn py-2.5 whitespace-nowrap" data-tab="analytics" data-active="false">Analytics</button>
+    <button class="tab-btn py-2.5 whitespace-nowrap" data-tab="emergency" data-active="false">Emergency Fund</button>
+  </nav>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+  <!-- ============================= DASHBOARD TAB ============================= -->
+  <section id="tab-dashboard" class="space-y-6">
+
+    <!-- Summary cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="card ruled p-5">
+        <p class="text-xs uppercase tracking-wide text-ink-muted">Total Income</p>
+        <p id="totalIncome" class="figure text-2xl sm:text-3xl font-semibold mt-2" style="color:var(--income)">฿0.00</p>
+      </div>
+      <div class="card ruled p-5">
+        <p class="text-xs uppercase tracking-wide text-ink-muted">Total Expense</p>
+        <p id="totalExpense" class="figure text-2xl sm:text-3xl font-semibold mt-2" style="color:var(--expense)">฿0.00</p>
+      </div>
+      <div class="card ruled p-5">
+        <p class="text-xs uppercase tracking-wide text-ink-muted">Current Balance</p>
+        <p id="totalBalance" class="figure text-2xl sm:text-3xl font-semibold mt-2">฿0.00</p>
+      </div>
+    </div>
+
+    <!-- Wallet balance summary -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="card p-5 sm:col-span-2">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <p class="text-xs uppercase tracking-wide text-ink-muted">Wallets</p>
+            <h2 class="font-display font-semibold text-base mt-1">Where your money lives</h2>
+          </div>
+          <button data-goto="wallets" class="text-xs text-ink-muted hover:underline">Manage →</button>
+        </div>
+        <div id="dashboardWalletList" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+      </div>
+      <div class="card ruled p-5">
+        <p class="text-xs uppercase tracking-wide text-ink-muted">Total Assets</p>
+        <p id="totalAssets" class="figure text-2xl sm:text-3xl font-semibold mt-2" style="color:var(--cyan)">฿0.00</p>
+        <p class="text-xs text-ink-muted mt-2">Bank + Savings</p>
+      </div>
+    </div>
+
+    <!-- Monthly budget -->
+    <div class="card p-5">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <div>
+          <h2 class="font-display font-semibold text-base">Monthly Budget</h2>
+          <p class="text-xs text-ink-muted" id="budgetMonthLabel">This month's spending against your limit</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-ink-muted">Limit</span>
+          <input id="budgetInput" type="number" min="0" step="1" placeholder="0.00"
+            class="figure w-28 px-2 py-1.5 rounded-md text-sm" />
+        </div>
+      </div>
+      <div class="w-full h-3 rounded-full overflow-hidden" style="background:var(--surface-2)">
+        <div id="budgetBar" class="h-full rounded-full" style="width:0%; background:var(--income); transition:width .3s ease, background-color .3s ease;"></div>
+      </div>
+      <div class="flex items-center justify-between mt-2">
+        <p id="budgetStatus" class="text-xs text-ink-muted">Set a monthly budget to track spending.</p>
+        <p id="budgetPct" class="figure text-xs text-ink-muted">0%</p>
+      </div>
+      <div id="budgetAlert" class="hidden mt-3 text-sm px-3 py-2 rounded-md" style="background:color-mix(in srgb, var(--expense) 12%, transparent); color:var(--expense);">
+        ⚠ You've crossed 80% of your monthly budget.
+      </div>
+    </div>
+
+    <!-- Recent transactions preview -->
+    <div class="card">
+      <div class="flex items-center justify-between p-5 pb-3">
+        <h2 class="font-display font-semibold text-base">Recent Activity</h2>
+        <button data-goto="transactions" class="text-xs text-ink-muted hover:underline">View all →</button>
+      </div>
+      <div id="recentList" class="divide-y" style="border-color:var(--hairline)"></div>
+      <p id="recentEmpty" class="text-sm text-ink-muted px-5 py-6 hidden">No transactions yet. Add your first one from the Transactions tab.</p>
+    </div>
+  </section>
+
+  <!-- ============================= TRANSACTIONS TAB ============================= -->
+  <section id="tab-transactions" class="space-y-4 hidden">
+
+    <!-- Quick add -->
+    <div class="card p-4">
+      <label class="text-xs uppercase tracking-wide text-ink-muted">Quick Add</label>
+      <div class="flex gap-2 mt-2">
+        <input id="quickAddInput" type="text" placeholder='Try "Lunch 60" — title then amount, Enter to open the form'
+          class="flex-1 px-3 py-2.5 rounded-card text-sm" />
+        <button id="quickAddBtn" class="px-4 py-2.5 rounded-card text-sm font-medium text-white" style="background:var(--gold);">
+          Add
+        </button>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card p-4 flex flex-wrap gap-3 items-end">
+      <div>
+        <label class="text-xs text-ink-muted block mb-1">Month</label>
+        <input id="filterMonth" type="month" class="px-3 py-2 rounded-md text-sm" />
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1">Type</label>
+        <select id="filterType" class="px-3 py-2 rounded-md text-sm">
+          <option value="all">All</option>
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1">Category</label>
+        <select id="filterCategory" class="px-3 py-2 rounded-md text-sm">
+          <option value="all">All</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1">Wallet</label>
+        <select id="filterWallet" class="px-3 py-2 rounded-md text-sm"></select>
+      </div>
+      <button id="clearFiltersBtn" class="text-xs text-ink-muted hover:underline pb-2">Clear filters</button>
+      <button id="openAddModalBtn" class="ml-auto px-4 py-2 rounded-card text-sm font-medium text-white" style="background:var(--ink);">
+        + New Transaction
+      </button>
+    </div>
+
+    <!-- Transaction list -->
+    <div class="card perforated overflow-hidden">
+      <div id="txnList" class="divide-y" style="border-color:var(--hairline)"></div>
+      <p id="txnEmpty" class="text-sm text-ink-muted px-5 py-10 text-center hidden">No transactions match these filters.</p>
+    </div>
+  </section>
+
+  <!-- ============================= WALLETS TAB ============================= -->
+  <section id="tab-wallets" class="space-y-4 hidden">
+    <div class="card p-5">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+          <p class="text-xs uppercase tracking-wide text-ink-muted">Wallet System</p>
+          <h2 class="font-display font-semibold text-xl mt-1">Your money, separated clearly</h2>
+          <p class="text-xs text-ink-muted mt-1">Transfers move assets between wallets and never count as income or expense.</p>
+        </div>
+        <button id="openTransferBtn" class="glass-button px-4 py-2.5 rounded-card text-sm font-medium">↔ Transfer money</button>
+      </div>
+      <div id="walletCards" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      <div class="mt-4 pt-4 border-t flex items-center justify-between" style="border-color:var(--hairline)">
+        <div>
+          <p class="text-xs uppercase tracking-wide text-ink-muted">Total Assets</p>
+          <p class="text-xs text-ink-muted mt-1">Bank + Savings</p>
+        </div>
+        <p id="walletTotalAssets" class="figure text-2xl font-semibold">฿0.00</p>
+      </div>
+    </div>
+
+    <div class="card p-5">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h2 class="font-display font-semibold text-base">Transfer History</h2>
+          <p class="text-xs text-ink-muted">Moving money between wallets does not change Total Assets.</p>
+        </div>
+      </div>
+      <div id="transferList" class="divide-y" style="border-color:var(--hairline)"></div>
+      <p id="transferEmpty" class="text-sm text-ink-muted py-8 text-center hidden">No transfers yet.</p>
+    </div>
+  </section>
+
+  <!-- ============================= DAILY SUMMARY TAB ============================= -->
+  <section id="tab-daily" class="space-y-4 hidden">
+    <div class="card p-5">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <div>
+          <p class="text-xs uppercase tracking-wide text-ink-muted">Daily overview</p>
+          <h2 id="dailyTitle" class="font-display font-semibold text-xl mt-1">Today's Spending</h2>
+        </div>
+        <input id="dailyDate" type="date" class="px-3 py-2 rounded-card text-sm" />
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="card p-4">
+          <p class="text-xs text-ink-muted">Income</p>
+          <p id="dailyIncome" class="figure text-xl font-semibold mt-1" style="color:var(--income)">฿0.00</p>
+        </div>
+        <div class="card p-4">
+          <p class="text-xs text-ink-muted">Expense</p>
+          <p id="dailyExpense" class="figure text-xl font-semibold mt-1" style="color:var(--expense)">฿0.00</p>
+        </div>
+        <div class="card p-4">
+          <p class="text-xs text-ink-muted">Net</p>
+          <p id="dailyNet" class="figure text-xl font-semibold mt-1">฿0.00</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="card p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-display font-semibold text-base">Spending by Category</h2>
+          <span id="dailyTxnCount" class="text-xs text-ink-muted">0 transactions</span>
+        </div>
+        <div id="dailyCategoryList" class="space-y-2"></div>
+        <p id="dailyCategoryEmpty" class="text-sm text-ink-muted py-5 hidden">No spending recorded for this day.</p>
+      </div>
+
+      <div class="card p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-display font-semibold text-base">Today's Activity</h2>
+          <button data-goto="transactions" class="text-xs text-ink-muted hover:underline">Manage →</button>
+        </div>
+        <div id="dailyTxnList" class="divide-y" style="border-color:var(--hairline)"></div>
+        <p id="dailyTxnEmpty" class="text-sm text-ink-muted py-5 hidden">No transactions for this day.</p>
+      </div>
+    </div>
+
+    <div class="card p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-display font-semibold text-base">Last 7 Days</h2>
+        <span class="text-xs text-ink-muted">Daily expenses</span>
+      </div>
+      <div id="dailyWeekList" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2"></div>
+    </div>
+  </section>
+
+  <!-- ============================= ANALYTICS TAB ============================= -->
+  <section id="tab-analytics" class="space-y-4 hidden">
+    <div class="card p-5">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <h2 class="font-display font-semibold text-base">Expense Breakdown by Category</h2>
+        <input id="analyticsMonth" type="month" class="px-3 py-2 rounded-md text-sm" />
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-6 items-center">
+        <div class="md:col-span-3 relative" style="height:300px;">
+          <canvas id="categoryPie"></canvas>
+        </div>
+        <div id="categoryLegend" class="md:col-span-2 space-y-2"></div>
+      </div>
+      <p id="analyticsEmpty" class="text-sm text-ink-muted text-center py-6 hidden">No expenses recorded for this month yet.</p>
+    </div>
+  </section>
+
+  <!-- ============================= EMERGENCY FUND TAB ============================= -->
+  <section id="tab-emergency" class="space-y-4 hidden">
+    <div class="card p-5">
+      <h2 class="font-display font-semibold text-base">Emergency Fund Calculator</h2>
+      <p class="text-sm text-ink-muted mt-1">Estimates a safety net based on your average monthly expenses to date.</p>
+
+      <div class="grid sm:grid-cols-2 gap-5 mt-5">
+        <div>
+          <label class="text-xs text-ink-muted block mb-1">Coverage window: <span id="monthsRangeLabel" class="figure">6 months</span></label>
+          <input id="monthsRange" type="range" min="3" max="6" step="1" value="6" class="w-full accent-[var(--gold)]" />
+          <div class="flex justify-between text-[11px] text-ink-muted mt-1"><span>3 mo (lean)</span><span>6 mo (comfortable)</span></div>
+        </div>
+        <div>
+          <label class="text-xs text-ink-muted block mb-1">Current savings set aside (optional)</label>
+          <input id="currentSavings" type="number" min="0" step="1" placeholder="0.00" class="figure w-full px-3 py-2 rounded-md text-sm" />
+        </div>
+      </div>
+
+      <div class="grid sm:grid-cols-3 gap-4 mt-6">
+        <div class="card ruled p-4">
+          <p class="text-xs text-ink-muted">Avg. monthly expense</p>
+          <p id="avgMonthlyExpense" class="figure text-xl font-semibold mt-1">฿0.00</p>
+        </div>
+        <div class="card ruled p-4">
+          <p class="text-xs text-ink-muted">Target emergency fund</p>
+          <p id="targetFund" class="figure text-xl font-semibold mt-1" style="color:var(--gold)">฿0.00</p>
+        </div>
+        <div class="card ruled p-4">
+          <p class="text-xs text-ink-muted">Still needed</p>
+          <p id="fundGap" class="figure text-xl font-semibold mt-1">฿0.00</p>
+        </div>
+      </div>
+
+      <div class="mt-5">
+        <div class="w-full h-3 rounded-full overflow-hidden" style="background:var(--surface-2)">
+          <div id="fundProgressBar" class="h-full rounded-full" style="width:0%; background:var(--income); transition:width .3s ease;"></div>
+        </div>
+        <p id="fundProgressLabel" class="text-xs text-ink-muted mt-2">0% funded</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============================= ADD/EDIT MODAL ============================= -->
+<div id="modalBackdrop" class="modal-backdrop fixed inset-0 z-40 hidden items-center justify-center p-4">
+  <div class="modal-panel card w-full max-w-md p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h3 id="modalTitle" class="font-display font-semibold text-lg">New Transaction</h3>
+      <button id="closeModalBtn" class="text-ink-muted hover:text-ink text-xl leading-none">&times;</button>
+    </div>
+
+    <form id="txnForm" class="space-y-3">
+      <input type="hidden" id="txnId" />
+
+      <!-- Type toggle -->
+      <div class="grid grid-cols-2 gap-2">
+        <button type="button" data-type="expense" class="type-btn px-3 py-2 rounded-card text-sm font-medium border" style="border-color:var(--expense); color:var(--expense);">Expense</button>
+        <button type="button" data-type="income" class="type-btn px-3 py-2 rounded-card text-sm font-medium border" style="border-color:var(--hairline); color:var(--ink-muted);">Income</button>
+      </div>
+
+      <div>
+        <label class="text-xs text-ink-muted block mb-1">Title</label>
+        <input id="txnTitle" required type="text" placeholder="e.g. Lunch with team" class="w-full px-3 py-2 rounded-md text-sm" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-ink-muted block mb-1">Amount</label>
+          <input id="txnAmount" required type="number" min="0" step="0.01" placeholder="0.00" class="figure w-full px-3 py-2 rounded-md text-sm" />
+        </div>
+        <div>
+          <label class="text-xs text-ink-muted block mb-1">Date</label>
+          <input id="txnDate" required type="date" class="w-full px-3 py-2 rounded-md text-sm" />
+        </div>
+      </div>
+
+      <div>
+        <label class="text-xs text-ink-muted block mb-1">Category</label>
+        <select id="txnCategory" class="w-full px-3 py-2 rounded-md text-sm"></select>
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1">Wallet</label>
+        <select id="txnWallet" class="w-full px-3 py-2 rounded-md text-sm"></select>
+      </div>
+
+      <div>
+        <label class="text-xs text-ink-muted block mb-1">Notes (optional)</label>
+        <textarea id="txnNotes" rows="2" placeholder="Any extra detail…" class="w-full px-3 py-2 rounded-md text-sm resize-none"></textarea>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button type="submit" class="flex-1 px-4 py-2.5 rounded-card text-sm font-medium text-white" style="background:var(--ink);">Save Transaction</button>
+        <button type="button" id="deleteTxnBtn" class="hidden px-4 py-2.5 rounded-card text-sm font-medium" style="color:var(--expense); border:1px solid var(--expense);">Delete</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================= TRANSFER MODAL ============================= -->
+<div id="transferBackdrop" class="modal-backdrop fixed inset-0 z-40 hidden items-center justify-center p-4">
+  <div class="modal-panel card w-full max-w-md p-5">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <p class="text-xs uppercase tracking-wide text-ink-muted">Asset transfer</p>
+        <h3 class="font-display font-semibold text-lg mt-1">Transfer between wallets</h3>
+      </div>
+      <button id="closeTransferBtn" class="text-ink-muted hover:text-ink text-xl leading-none">&times;</button>
+    </div>
+    <form id="transferForm" class="space-y-3">
+      <div>
+        <label class="text-xs text-ink-muted block mb-1">From</label>
+        <select id="transferFrom" class="w-full px-3 py-2 rounded-md text-sm"></select>
+      </div>
+      <div class="flex justify-center -my-1">
+        <span class="w-8 h-8 rounded-full flex items-center justify-center" style="background:rgba(98,233,255,.12);color:var(--cyan)">↓</span>
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1">To</label>
+        <select id="transferTo" class="w-full px-3 py-2 rounded-md text-sm"></select>
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1">Amount</label>
+        <input id="transferAmount" required type="number" min="0.01" step="0.01" placeholder="0.00" class="figure w-full px-3 py-2 rounded-md text-sm" />
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1">Date</label>
+        <input id="transferDate" required type="date" class="w-full px-3 py-2 rounded-md text-sm" />
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1">Note (optional)</label>
+        <input id="transferNote" type="text" placeholder="e.g. Monthly savings" class="w-full px-3 py-2 rounded-md text-sm" />
+      </div>
+      <button type="submit" class="w-full px-4 py-2.5 rounded-card text-sm font-medium text-white" style="background:var(--ink);">Confirm Transfer</button>
+    </form>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-card text-sm text-white opacity-0 pointer-events-none z-50" style="background:var(--ink);"></div>
+
+<script>
+/* =====================================================================
+   LEDGER — Personal Finance Tracker
+   Plain vanilla JS, organized into clearly commented modules so this is
+   easy to extend later (e.g. swap localStorage for a real backend by
+   only touching the STORAGE module).
+   ===================================================================== */
+
+/* ---------------------- CONSTANTS ---------------------- */
+const CATEGORIES = [
+  { key: 'Food', color: '#F59E0B' },
+  { key: 'Transport', color: '#3B82F6' },
+  { key: 'Bills', color: '#8B5CF6' },
+  { key: 'Shopping', color: '#EC4899' },
+  { key: 'Entertainment', color: '#14B8A6' },
+  { key: 'Others', color: '#6B7280' },
+];
+const LS_KEYS = {
+  transactions: 'ledger_transactions',
+  budget: 'ledger_monthly_budget',
+  theme: 'ledger_theme',
+  wallets: 'ledger_wallets',
+  transfers: 'ledger_transfers',
+};
+
+/* ---------------------- STORAGE MODULE ----------------------
+   Everything reading/writing localStorage lives here. If you later
+   want to swap in an API, this is the only module to change. */
+const Storage = {
+  getTransactions() {
+    try { return JSON.parse(localStorage.getItem(LS_KEYS.transactions)) || []; }
+    catch { return []; }
+  },
+  saveTransactions(list) {
+    localStorage.setItem(LS_KEYS.transactions, JSON.stringify(list));
+  },
+  getWallets() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(LS_KEYS.wallets));
+      if (Array.isArray(saved) && saved.length) return saved;
+    } catch {}
+    return [
+      { id: 'bank', name: 'Bank Wallet', type: 'bank', openingBalance: 0 },
+      { id: 'savings', name: 'Savings Wallet', type: 'savings', openingBalance: 0 },
+    ];
+  },
+  saveWallets(list) {
+    localStorage.setItem(LS_KEYS.wallets, JSON.stringify(list));
+  },
+  getTransfers() {
+    try { return JSON.parse(localStorage.getItem(LS_KEYS.transfers)) || []; }
+    catch { return []; }
+  },
+  saveTransfers(list) {
+    localStorage.setItem(LS_KEYS.transfers, JSON.stringify(list));
+  },
+  getBudget() {
+    const v = localStorage.getItem(LS_KEYS.budget);
+    return v ? parseFloat(v) : 0;
+  },
+  saveBudget(v) {
+    localStorage.setItem(LS_KEYS.budget, String(v));
+  },
+  getTheme() {
+    return localStorage.getItem(LS_KEYS.theme) || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  },
+  saveTheme(t) {
+    localStorage.setItem(LS_KEYS.theme, t);
+  }
+};
+
+/* ---------------------- STATE ---------------------- */
+let state = {
+  transactions: Storage.getTransactions(),
+  transfers: Storage.getTransfers(),
+  wallets: Storage.getWallets(),
+  budget: Storage.getBudget(),
+  filters: { month: '', type: 'all', category: 'all', wallet: 'all' },
+  activeTab: 'dashboard',
+};
+
+// Existing V5 transactions predate Wallet System. Keep them intact and
+// assign them to the main Bank Wallet so old data is never lost.
+let walletsChangedByMigration = false;
+state.wallets = state.wallets.map(w => ({
+  id: w.id,
+  name: w.name,
+  type: w.type,
+  openingBalance: Number(w.openingBalance) || 0
+}));
+if (!state.wallets.some(w => w.id === 'bank')) {
+  state.wallets.unshift({ id: 'bank', name: 'Bank Wallet', type: 'bank', openingBalance: 0 });
+  walletsChangedByMigration = true;
+}
+if (!state.wallets.some(w => w.id === 'savings')) {
+  state.wallets.push({ id: 'savings', name: 'Savings Wallet', type: 'savings', openingBalance: 0 });
+  walletsChangedByMigration = true;
+}
+state.transactions = state.transactions.map(t => {
+  if (!t.walletId) { walletsChangedByMigration = true; return { ...t, walletId: 'bank' }; }
+  return t;
+});
+if (walletsChangedByMigration) {
+  Storage.saveWallets(state.wallets);
+  Storage.saveTransactions(state.transactions);
+}
+
+/* ---------------------- UTILS ---------------------- */
+const Utils = {
+  uid() { return 't_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); },
+  fmtMoney(n) {
+    const v = Number(n) || 0;
+    return (v < 0 ? '-฿' : '฿') + Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  },
+  monthKey(dateStr) { return dateStr ? dateStr.slice(0, 7) : ''; }, // "YYYY-MM"
+  todayISO() { return new Date().toISOString().slice(0, 10); },
+  currentMonthKey() { return Utils.todayISO().slice(0, 7); },
+  fmtDateHuman(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  },
+  monthLabel(monthKey) {
+    if (!monthKey) return '';
+    const [y, m] = monthKey.split('-');
+    const d = new Date(parseInt(y), parseInt(m) - 1, 1);
+    return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  },
+  /* Parses quick-add text like "Lunch 60" -> { title: "Lunch", amount: 60 }
+     Amount is the trailing number in the string; everything before it is the title. */
+  parseQuickAdd(text) {
+    const match = text.trim().match(/^(.*?)[\s]+(\d+(\.\d+)?)$/);
+    if (match) {
+      return { title: match[1].trim() || 'Untitled', amount: parseFloat(match[2]) };
+    }
+    // fallback: if it's just a number, no title; if just text, no amount
+    const onlyNum = text.trim().match(/^(\d+(\.\d+)?)$/);
+    if (onlyNum) return { title: '', amount: parseFloat(onlyNum[1]) };
+    return { title: text.trim(), amount: '' };
+  },
+  categoryColor(key) {
+    const c = CATEGORIES.find(c => c.key === key);
+    return c ? c.color : '#6B7280';
+  },
+  walletName(id) {
+    const w = state.wallets.find(w => w.id === id);
+    return w ? w.name : 'Bank Wallet';
+  },
+  walletIcon(id) {
+    const w = state.wallets.find(w => w.id === id);
+    return w && w.type === 'savings' ? '💰' : '🏦';
+  }
+};
+
+/* ---------------------- TOAST ---------------------- */
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.opacity = '1';
+  el.style.transform = 'translate(-50%, -4px)';
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.transform = 'translate(-50%, 0)';
+  }, 2000);
+}
+
+/* ---------------------- THEME ---------------------- */
+function applyTheme(theme) {
+  document.documentElement.classList.toggle('dark', theme === 'dark');
+  document.getElementById('iconSun').classList.toggle('hidden', theme === 'dark');
+  document.getElementById('iconMoon').classList.toggle('hidden', theme !== 'dark');
+  Storage.saveTheme(theme);
+}
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+  applyTheme(next);
+  renderChart(); // chart colors depend on theme text color in legend, cheap to redraw
+});
+applyTheme(Storage.getTheme());
+
+/* ---------------------- TABS ---------------------- */
+function showTab(name) {
+  state.activeTab = name;
+  ['dashboard', 'transactions', 'wallets', 'daily', 'analytics', 'emergency'].forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('hidden', t !== name);
+  });
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.dataset.active = String(btn.dataset.tab === name);
+  });
+  if (name === 'wallets') renderWallets();
+  if (name === 'daily') renderDailySummary();
+  if (name === 'analytics') renderChart();
+  if (name === 'emergency') renderEmergencyFund();
+}
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => showTab(btn.dataset.tab));
+});
+document.querySelectorAll('[data-goto]').forEach(btn => {
+  btn.addEventListener('click', () => showTab(btn.dataset.goto));
+});
+
+/* ---------------------- CATEGORY SELECTS ---------------------- */
+function populateCategorySelects() {
+  const filterSel = document.getElementById('filterCategory');
+  const formSel = document.getElementById('txnCategory');
+  CATEGORIES.forEach(c => {
+    const opt1 = document.createElement('option'); opt1.value = c.key; opt1.textContent = c.key;
+    filterSel.appendChild(opt1);
+    const opt2 = document.createElement('option'); opt2.value = c.key; opt2.textContent = c.key;
+    formSel.appendChild(opt2);
+  });
+}
+function populateWalletSelects() {
+  const filter = document.getElementById('filterWallet');
+  const txn = document.getElementById('txnWallet');
+  const from = document.getElementById('transferFrom');
+  const to = document.getElementById('transferTo');
+  filter.innerHTML = '<option value="all">All wallets</option>';
+  [txn, from, to].forEach(sel => sel.innerHTML = '');
+  state.wallets.forEach(w => {
+    const label = `${w.type === 'savings' ? '💰' : '🏦'} ${w.name}`;
+    const add = (sel, value=w.id) => { const o=document.createElement('option'); o.value=value; o.textContent=label; sel.appendChild(o); };
+    add(filter); filter.lastElementChild.value = w.id;
+    add(txn); add(from); add(to);
+  });
+}
+populateCategorySelects();
+populateWalletSelects();
+
+/* ---------------------- COMPUTATIONS ---------------------- */
+function computeTotals(list) {
+  let income = 0, expense = 0;
+  list.forEach(t => { if (t.type === 'income') income += Number(t.amount); else expense += Number(t.amount); });
+  return { income, expense, balance: income - expense };
+}
+function walletBalance(walletId) {
+  const wallet = state.wallets.find(w => w.id === walletId);
+  if (!wallet) return 0;
+  let balance = Number(wallet.openingBalance) || 0;
+  state.transactions.forEach(t => {
+    if ((t.walletId || 'bank') !== walletId) return;
+    const amount = Number(t.amount) || 0;
+    balance += t.type === 'income' ? amount : -amount;
+  });
+  state.transfers.forEach(t => {
+    const amount = Number(t.amount) || 0;
+    if (t.fromWalletId === walletId) balance -= amount;
+    if (t.toWalletId === walletId) balance += amount;
+  });
+  return balance;
+}
+function totalAssets() {
+  return state.wallets.reduce((sum, w) => sum + walletBalance(w.id), 0);
+}
+function applyFilters(list) {
+  return list.filter(t => {
+    if (state.filters.month && Utils.monthKey(t.date) !== state.filters.month) return false;
+    if (state.filters.type !== 'all' && t.type !== state.filters.type) return false;
+    if (state.filters.category !== 'all' && t.category !== state.filters.category) return false;
+    if (state.filters.wallet !== 'all' && (t.walletId || 'bank') !== state.filters.wallet) return false;
+    return true;
+  });
+}
+function sortedByDateDesc(list) {
+  return [...list].sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.id.localeCompare(a.id));
+}
+/* Average monthly expense across all months that have at least one expense entry */
+function computeAvgMonthlyExpense() {
+  const expenses = state.transactions.filter(t => t.type === 'expense');
+  if (expenses.length === 0) return 0;
+  const byMonth = {};
+  expenses.forEach(t => {
+    const mk = Utils.monthKey(t.date);
+    byMonth[mk] = (byMonth[mk] || 0) + Number(t.amount);
+  });
+  const months = Object.keys(byMonth);
+  const total = months.reduce((s, m) => s + byMonth[m], 0);
+  return total / months.length;
+}
+
+/* ---------------------- RENDER: SUMMARY + BUDGET ---------------------- */
+function renderSummary() {
+  const { income, expense, balance } = computeTotals(state.transactions);
+  document.getElementById('totalIncome').textContent = Utils.fmtMoney(income);
+  document.getElementById('totalExpense').textContent = Utils.fmtMoney(expense);
+  const balEl = document.getElementById('totalBalance');
+  balEl.textContent = Utils.fmtMoney(balance);
+  balEl.style.color = balance < 0 ? 'var(--expense)' : 'var(--ink)';
+  document.getElementById('totalAssets').textContent = Utils.fmtMoney(totalAssets());
+  const list = document.getElementById('dashboardWalletList');
+  list.innerHTML = state.wallets.map(w => {
+    const bal = walletBalance(w.id);
+    return `<button class="wallet-card ${w.type} text-left" data-wallet-tab="${w.id}">
+      <div class="flex items-center gap-3">
+        <span class="wallet-badge">${w.type === 'savings' ? '💰' : '🏦'}</span>
+        <div><p class="text-xs text-ink-muted">${w.type === 'savings' ? 'Savings Wallet' : 'Bank Account Wallet'}</p><p class="font-medium text-sm">${escapeHTML(w.name)}</p></div>
+      </div>
+      <p class="figure text-xl font-semibold mt-4">${Utils.fmtMoney(bal)}</p>
+      <p class="text-xs text-ink-muted mt-1">${w.type === 'savings' ? 'Kept separate from everyday spending' : 'Main spending wallet'}</p>
+    </button>`;
+  }).join('');
+  list.querySelectorAll('[data-wallet-tab]').forEach(el => el.addEventListener('click', () => showTab('wallets')));
+}
+function renderBudget() {
+  const monthKey = Utils.currentMonthKey();
+  document.getElementById('budgetMonthLabel').textContent = `Spending in ${Utils.monthLabel(monthKey)} against your limit`;
+  const budgetInput = document.getElementById('budgetInput');
+  if (document.activeElement !== budgetInput) budgetInput.value = state.budget || '';
+
+  const monthExpense = state.transactions
+    .filter(t => t.type === 'expense' && Utils.monthKey(t.date) === monthKey)
+    .reduce((s, t) => s + Number(t.amount), 0);
+
+  const bar = document.getElementById('budgetBar');
+  const pctEl = document.getElementById('budgetPct');
+  const statusEl = document.getElementById('budgetStatus');
+  const alertEl = document.getElementById('budgetAlert');
+
+  if (!state.budget || state.budget <= 0) {
+    bar.style.width = '0%';
+    pctEl.textContent = '—';
+    statusEl.textContent = 'Set a monthly budget to track spending.';
+    alertEl.classList.add('hidden');
+    return;
+  }
+
+  const pct = Math.min(999, (monthExpense / state.budget) * 100);
+  bar.style.width = Math.min(100, pct) + '%';
+  bar.style.background = pct >= 100 ? 'var(--expense)' : pct >= 80 ? 'var(--gold)' : 'var(--income)';
+  pctEl.textContent = pct.toFixed(0) + '%';
+  statusEl.textContent = `${Utils.fmtMoney(monthExpense)} spent of ${Utils.fmtMoney(state.budget)}`;
+  alertEl.classList.toggle('hidden', pct < 80);
+  alertEl.textContent = pct >= 100
+    ? `⚠ You've exceeded your monthly budget by ${Utils.fmtMoney(monthExpense - state.budget)}.`
+    : `⚠ You've crossed 80% of your monthly budget.`;
+}
+
+/* ---------------------- RENDER: TRANSACTION ROWS ---------------------- */
+function txnRowHTML(t) {
+  const isIncome = t.type === 'income';
+  const color = isIncome ? 'var(--income)' : 'var(--expense)';
+  const sign = isIncome ? '+' : '−';
+  return `
+    <div class="row-enter flex items-center gap-3 px-5 py-3.5 hover:bg-surface-2 cursor-pointer" data-edit="${t.id}">
+      <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold"
+           style="background:color-mix(in srgb, ${Utils.categoryColor(t.category)} 18%, transparent); color:${Utils.categoryColor(t.category)};">
+        ${t.category.slice(0,2).toUpperCase()}
+      </div>
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-medium truncate">${escapeHTML(t.title)}</p>
+        <p class="text-xs text-ink-muted">${t.category} · ${Utils.walletIcon(t.walletId || 'bank')} ${Utils.walletName(t.walletId || 'bank')} · ${Utils.fmtDateHuman(t.date)}</p>
+      </div>
+      <p class="figure text-sm font-semibold shrink-0" style="color:${color}">${sign}${Utils.fmtMoney(t.amount)}</p>
+    </div>`;
+}
+function escapeHTML(s) {
+  const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML;
+}
+
+function renderRecent() {
+  const list = sortedByDateDesc(state.transactions).slice(0, 5);
+  const container = document.getElementById('recentList');
+  container.innerHTML = list.map(txnRowHTML).join('');
+  document.getElementById('recentEmpty').classList.toggle('hidden', list.length > 0);
+  container.querySelectorAll('[data-edit]').forEach(el => el.addEventListener('click', () => openModal(el.dataset.edit)));
+}
+
+function renderTransactionList() {
+  const filtered = applyFilters(state.transactions);
+  const sorted = sortedByDateDesc(filtered);
+  const container = document.getElementById('txnList');
+  container.innerHTML = sorted.map(txnRowHTML).join('');
+  document.getElementById('txnEmpty').classList.toggle('hidden', sorted.length > 0);
+  container.querySelectorAll('[data-edit]').forEach(el => el.addEventListener('click', () => openModal(el.dataset.edit)));
+}
+
+/* ---------------------- RENDER: WALLETS ---------------------- */
+function renderWallets() {
+  const cards = document.getElementById('walletCards');
+  cards.innerHTML = state.wallets.map(w => {
+    const bal = walletBalance(w.id);
+    const txCount = state.transactions.filter(t => (t.walletId || 'bank') === w.id).length;
+    const transferIn = state.transfers.filter(t => t.toWalletId === w.id).reduce((s,t)=>s+Number(t.amount),0);
+    const transferOut = state.transfers.filter(t => t.fromWalletId === w.id).reduce((s,t)=>s+Number(t.amount),0);
+    return `<div class="wallet-card ${w.type}">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <span class="wallet-badge">${w.type === 'savings' ? '💰' : '🏦'}</span>
+          <div><p class="font-semibold">${escapeHTML(w.name)}</p><p class="text-xs text-ink-muted">${w.type === 'savings' ? 'Savings Wallet' : 'Bank Account Wallet'}</p></div>
+        </div>
+        <span class="text-xs px-2 py-1 rounded-full" style="background:rgba(255,255,255,.08);color:var(--ink-muted)">${txCount} txns</span>
+      </div>
+      <p class="figure text-3xl font-semibold mt-5">${Utils.fmtMoney(bal)}</p>
+      <div class="grid grid-cols-3 gap-2 mt-4 text-xs">
+        <label class="block"><span class="text-ink-muted">Opening</span><input data-opening="${w.id}" type="number" min="0" step="0.01" value="${Number(w.openingBalance)||0}" class="figure mt-1 w-full px-2 py-1.5 rounded-md text-xs"></label>
+        <div><span class="text-ink-muted">Transfer in</span><p class="figure mt-1">${Utils.fmtMoney(transferIn)}</p></div>
+        <div><span class="text-ink-muted">Transfer out</span><p class="figure mt-1">${Utils.fmtMoney(transferOut)}</p></div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('walletTotalAssets').textContent = Utils.fmtMoney(totalAssets());
+  cards.querySelectorAll('[data-opening]').forEach(input => {
+    input.addEventListener('change', e => {
+      const w = state.wallets.find(x => x.id === e.target.dataset.opening);
+      if (!w) return;
+      w.openingBalance = Math.max(0, Number(e.target.value) || 0);
+      Storage.saveWallets(state.wallets);
+      renderAll();
+      toast('Wallet opening balance updated');
+    });
+  });
+
+  const list = document.getElementById('transferList');
+  const transfers = [...state.transfers].sort((a,b)=>(b.date||'').localeCompare(a.date||'') || b.id.localeCompare(a.id));
+  list.innerHTML = transfers.map(t => `<div class="flex items-center gap-3 px-1 py-3">
+    <div class="w-9 h-9 rounded-full flex items-center justify-center" style="background:rgba(98,233,255,.12);color:var(--cyan)">↔</div>
+    <div class="min-w-0 flex-1"><p class="text-sm font-medium truncate">${escapeHTML(t.note || 'Wallet transfer')}</p>
+      <p class="text-xs text-ink-muted">${Utils.walletName(t.fromWalletId)} → ${Utils.walletName(t.toWalletId)} · ${Utils.fmtDateHuman(t.date)}</p></div>
+    <p class="figure text-sm font-semibold">฿${Number(t.amount).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+  </div>`).join('');
+  document.getElementById('transferEmpty').classList.toggle('hidden', transfers.length > 0);
+}
+function openTransferModal() {
+  populateWalletSelects();
+  document.getElementById('transferDate').value = Utils.todayISO();
+  document.getElementById('transferAmount').value = '';
+  document.getElementById('transferNote').value = '';
+  document.getElementById('transferBackdrop').classList.remove('hidden');
+  document.getElementById('transferBackdrop').classList.add('flex');
+}
+function closeTransferModal() {
+  document.getElementById('transferBackdrop').classList.add('hidden');
+  document.getElementById('transferBackdrop').classList.remove('flex');
+}
+document.getElementById('openTransferBtn').addEventListener('click', openTransferModal);
+document.getElementById('closeTransferBtn').addEventListener('click', closeTransferModal);
+document.getElementById('transferBackdrop').addEventListener('click', e => { if (e.target.id === 'transferBackdrop') closeTransferModal(); });
+document.getElementById('transferForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const from = document.getElementById('transferFrom').value;
+  const to = document.getElementById('transferTo').value;
+  const amount = Math.abs(Number(document.getElementById('transferAmount').value) || 0);
+  if (!from || !to || from === to) { toast('Choose two different wallets'); return; }
+  if (amount <= 0) { toast('Enter a valid amount'); return; }
+  if (amount > walletBalance(from)) { toast('Not enough balance in the source wallet'); return; }
+  state.transfers.push({
+    id: Utils.uid().replace(/^t_/,'x_'),
+    fromWalletId: from,
+    toWalletId: to,
+    amount,
+    date: document.getElementById('transferDate').value || Utils.todayISO(),
+    note: document.getElementById('transferNote').value.trim()
+  });
+  Storage.saveTransfers(state.transfers);
+  closeTransferModal();
+  renderAll();
+  toast('Transfer completed');
+});
+
+/* ---------------------- RENDER: DAILY SUMMARY ---------------------- */
+function renderDailySummary() {
+  const dateInput = document.getElementById('dailyDate');
+  const dateKey = dateInput.value || Utils.todayISO();
+  dateInput.value = dateKey;
+  const d = new Date(dateKey + 'T00:00:00');
+  document.getElementById('dailyTitle').textContent = d.toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
+
+  const txns = state.transactions.filter(t => t.date === dateKey);
+  const income = txns.filter(t => t.type === 'income').reduce((s,t) => s + Number(t.amount), 0);
+  const expense = txns.filter(t => t.type === 'expense').reduce((s,t) => s + Number(t.amount), 0);
+  const net = income - expense;
+  document.getElementById('dailyIncome').textContent = Utils.fmtMoney(income);
+  document.getElementById('dailyExpense').textContent = Utils.fmtMoney(expense);
+  const netEl = document.getElementById('dailyNet');
+  netEl.textContent = Utils.fmtMoney(net);
+  netEl.style.color = net < 0 ? 'var(--expense)' : 'var(--income)';
+  document.getElementById('dailyTxnCount').textContent = `${txns.length} transaction${txns.length === 1 ? '' : 's'}`;
+
+  const categoryTotals = {};
+  txns.filter(t => t.type === 'expense').forEach(t => { categoryTotals[t.category] = (categoryTotals[t.category] || 0) + Number(t.amount); });
+  const cats = Object.entries(categoryTotals).sort((a,b) => b[1]-a[1]);
+  const catContainer = document.getElementById('dailyCategoryList');
+  catContainer.innerHTML = cats.map(([cat, amount]) => {
+    const pct = expense ? amount / expense * 100 : 0;
+    return `<div class="py-1.5"><div class="flex items-center justify-between text-sm mb-1"><span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full" style="background:${Utils.categoryColor(cat)}"></span>${escapeHTML(cat)}</span><span class="figure text-ink-muted">${Utils.fmtMoney(amount)}</span></div><div class="h-1.5 rounded-full overflow-hidden" style="background:var(--surface-2)"><div class="h-full rounded-full" style="width:${pct}%;background:${Utils.categoryColor(cat)}"></div></div></div>`;
+  }).join('');
+  document.getElementById('dailyCategoryEmpty').classList.toggle('hidden', cats.length > 0);
+
+  const txnContainer = document.getElementById('dailyTxnList');
+  txnContainer.innerHTML = sortedByDateDesc(txns).map(txnRowHTML).join('');
+  document.getElementById('dailyTxnEmpty').classList.toggle('hidden', txns.length > 0);
+  txnContainer.querySelectorAll('[data-edit]').forEach(el => el.addEventListener('click', () => openModal(el.dataset.edit)));
+
+  const week = [];
+  for (let i=6; i>=0; i--) { const x = new Date(d); x.setDate(d.getDate()-i); week.push(x.toISOString().slice(0,10)); }
+  document.getElementById('dailyWeekList').innerHTML = week.map(day => {
+    const ex = state.transactions.filter(t => t.date === day && t.type === 'expense').reduce((s,t)=>s+Number(t.amount),0);
+    const active = day === dateKey;
+    const label = new Date(day+'T00:00:00').toLocaleDateString(undefined,{weekday:'short'});
+    return `<button class="card p-3 text-left ${active ? 'ring-2' : ''}" data-day="${day}" style="${active ? 'outline:2px solid var(--gold);' : ''}"><p class="text-xs text-ink-muted">${label}</p><p class="figure text-sm font-semibold mt-1">${Utils.fmtMoney(ex)}</p><p class="text-[10px] text-ink-muted mt-1">${day.slice(5).replace('-','/')}</p></button>`;
+  }).join('');
+  document.querySelectorAll('[data-day]').forEach(btn => btn.addEventListener('click', () => { dateInput.value = btn.dataset.day; renderDailySummary(); }));
+}
+
+/* ---------------------- RENDER: ANALYTICS (PIE CHART) ---------------------- */
+let pieChart = null;
+function renderChart() {
+  const monthKey = document.getElementById('analyticsMonth').value;
+  const expenses = state.transactions.filter(t => t.type === 'expense' && (!monthKey || Utils.monthKey(t.date) === monthKey));
+
+  const totals = {};
+  expenses.forEach(t => { totals[t.category] = (totals[t.category] || 0) + Number(t.amount); });
+  const labels = Object.keys(totals);
+  const data = labels.map(l => totals[l]);
+  const colors = labels.map(l => Utils.categoryColor(l));
+
+  document.getElementById('analyticsEmpty').classList.toggle('hidden', labels.length > 0);
+
+  const legend = document.getElementById('categoryLegend');
+  const grandTotal = data.reduce((a, b) => a + b, 0);
+  legend.innerHTML = labels.map((l, i) => {
+    const pct = grandTotal ? ((data[i] / grandTotal) * 100).toFixed(1) : '0.0';
+    return `<div class="flex items-center justify-between text-sm py-1.5 border-b" style="border-color:var(--hairline)">
+        <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full" style="background:${colors[i]}"></span>${l}</span>
+        <span class="figure text-ink-muted">${Utils.fmtMoney(data[i])} · ${pct}%</span>
+      </div>`;
+  }).join('') || `<p class="text-sm text-ink-muted">Nothing to show yet.</p>`;
+
+  const ctx = document.getElementById('categoryPie').getContext('2d');
+  if (pieChart) pieChart.destroy();
+  pieChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: getComputedStyle(document.documentElement).getPropertyValue('--surface') }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '62%',
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => ` ${c.label}: ${Utils.fmtMoney(c.raw)}` } } }
+    }
+  });
+}
+
+/* ---------------------- RENDER: EMERGENCY FUND ---------------------- */
+function renderEmergencyFund() {
+  const months = parseInt(document.getElementById('monthsRange').value, 10);
+  document.getElementById('monthsRangeLabel').textContent = months + ' months';
+  const avg = computeAvgMonthlyExpense();
+  const target = avg * months;
+  const savings = parseFloat(document.getElementById('currentSavings').value) || 0;
+  const gap = Math.max(0, target - savings);
+  const pct = target > 0 ? Math.min(100, (savings / target) * 100) : 0;
+
+  document.getElementById('avgMonthlyExpense').textContent = Utils.fmtMoney(avg);
+  document.getElementById('targetFund').textContent = Utils.fmtMoney(target);
+  document.getElementById('fundGap').textContent = Utils.fmtMoney(gap);
+  document.getElementById('fundProgressBar').style.width = pct + '%';
+  document.getElementById('fundProgressBar').style.background = pct >= 100 ? 'var(--income)' : 'var(--gold)';
+  document.getElementById('fundProgressLabel').textContent = pct.toFixed(0) + '% funded';
+}
+document.getElementById('monthsRange').addEventListener('input', renderEmergencyFund);
+document.getElementById('currentSavings').addEventListener('input', renderEmergencyFund);
+
+/* ---------------------- MASTER RENDER ---------------------- */
+function renderAll() {
+  renderSummary();
+  renderWallets();
+  renderBudget();
+  renderRecent();
+  renderTransactionList();
+  if (state.activeTab === 'daily') renderDailySummary();
+  if (state.activeTab === 'analytics') renderChart();
+  if (state.activeTab === 'emergency') renderEmergencyFund();
+}
+
+/* ---------------------- FILTERS ---------------------- */
+document.getElementById('filterMonth').addEventListener('change', e => { state.filters.month = e.target.value; renderTransactionList(); });
+document.getElementById('filterType').addEventListener('change', e => { state.filters.type = e.target.value; renderTransactionList(); });
+document.getElementById('filterCategory').addEventListener('change', e => { state.filters.category = e.target.value; renderTransactionList(); });
+document.getElementById('filterWallet').addEventListener('change', e => { state.filters.wallet = e.target.value; renderTransactionList(); });
+document.getElementById('clearFiltersBtn').addEventListener('click', () => {
+  state.filters = { month: '', type: 'all', category: 'all', wallet: 'all' };
+  document.getElementById('filterMonth').value = '';
+  document.getElementById('filterType').value = 'all';
+  document.getElementById('filterCategory').value = 'all';
+  document.getElementById('filterWallet').value = 'all';
+  renderTransactionList();
+});
+document.getElementById('analyticsMonth').addEventListener('change', renderChart);
+document.getElementById('dailyDate').addEventListener('change', renderDailySummary);
+
+/* ---------------------- BUDGET INPUT ---------------------- */
+document.getElementById('budgetInput').addEventListener('input', e => {
+  state.budget = parseFloat(e.target.value) || 0;
+  Storage.saveBudget(state.budget);
+  renderBudget();
+});
+
+/* ---------------------- MODAL: ADD / EDIT ---------------------- */
+let modalMode = 'add'; // 'add' | 'edit'
+let modalType = 'expense';
+
+function setModalType(type) {
+  modalType = type;
+  document.querySelectorAll('.type-btn').forEach(btn => {
+    const active = btn.dataset.type === type;
+    const color = type === 'income' ? 'var(--income)' : 'var(--expense)';
+    btn.style.borderColor = active ? color : 'var(--hairline)';
+    btn.style.color = active ? color : 'var(--ink-muted)';
+  });
+}
+document.querySelectorAll('.type-btn').forEach(btn => btn.addEventListener('click', () => setModalType(btn.dataset.type)));
+
+function openModal(id = null) {
+  const form = document.getElementById('txnForm');
+  form.reset();
+  if (id) {
+    const t = state.transactions.find(x => x.id === id);
+    if (!t) return;
+    modalMode = 'edit';
+    document.getElementById('modalTitle').textContent = 'Edit Transaction';
+    document.getElementById('txnId').value = t.id;
+    document.getElementById('txnTitle').value = t.title;
+    document.getElementById('txnAmount').value = t.amount;
+    document.getElementById('txnDate').value = t.date;
+    document.getElementById('txnCategory').value = t.category;
+    document.getElementById('txnWallet').value = t.walletId || 'bank';
+    document.getElementById('txnNotes').value = t.notes || '';
+    setModalType(t.type);
+    document.getElementById('deleteTxnBtn').classList.remove('hidden');
+  } else {
+    modalMode = 'add';
+    document.getElementById('modalTitle').textContent = 'New Transaction';
+    document.getElementById('txnId').value = '';
+    document.getElementById('txnDate').value = Utils.todayISO();
+    document.getElementById('txnWallet').value = 'bank';
+    setModalType('expense');
+    document.getElementById('deleteTxnBtn').classList.add('hidden');
+  }
+  document.getElementById('modalBackdrop').classList.remove('hidden');
+  document.getElementById('modalBackdrop').classList.add('flex');
+  setTimeout(() => document.getElementById('txnTitle').focus(), 50);
+}
+function closeModal() {
+  document.getElementById('modalBackdrop').classList.add('hidden');
+  document.getElementById('modalBackdrop').classList.remove('flex');
+}
+document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+document.getElementById('modalBackdrop').addEventListener('click', e => { if (e.target.id === 'modalBackdrop') closeModal(); });
+document.getElementById('openAddModalBtn').addEventListener('click', () => openModal());
+
+document.getElementById('txnForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const id = document.getElementById('txnId').value;
+  const payload = {
+    id: id || Utils.uid(),
+    type: modalType,
+    title: document.getElementById('txnTitle').value.trim() || 'Untitled',
+    amount: Math.abs(parseFloat(document.getElementById('txnAmount').value) || 0),
+    category: document.getElementById('txnCategory').value,
+    walletId: document.getElementById('txnWallet').value || 'bank',
+    date: document.getElementById('txnDate').value || Utils.todayISO(),
+    notes: document.getElementById('txnNotes').value.trim(),
+  };
+  if (id) {
+    const idx = state.transactions.findIndex(t => t.id === id);
+    if (idx > -1) state.transactions[idx] = payload;
+    toast('Transaction updated');
+  } else {
+    state.transactions.push(payload);
+    toast('Transaction added');
+  }
+  Storage.saveTransactions(state.transactions);
+  closeModal();
+  renderAll();
+});
+
+document.getElementById('deleteTxnBtn').addEventListener('click', () => {
+  const id = document.getElementById('txnId').value;
+  if (!id) return;
+  if (!confirm('Delete this transaction? This cannot be undone.')) return;
+  state.transactions = state.transactions.filter(t => t.id !== id);
+  Storage.saveTransactions(state.transactions);
+  closeModal();
+  renderAll();
+  toast('Transaction deleted');
+});
+
+/* ---------------------- QUICK ADD ---------------------- */
+function handleQuickAdd() {
+  const input = document.getElementById('quickAddInput');
+  const text = input.value.trim();
+  if (!text) return;
+  const { title, amount } = Utils.parseQuickAdd(text);
+  openModal(); // opens a fresh "add" form
+  document.getElementById('txnTitle').value = title;
+  if (amount !== '') document.getElementById('txnAmount').value = amount;
+  input.value = '';
+  // If amount parsed, jump focus to category for a fast finish
+  if (amount !== '') document.getElementById('txnCategory').focus();
+}
+document.getElementById('quickAddBtn').addEventListener('click', handleQuickAdd);
+document.getElementById('quickAddInput').addEventListener('keydown', e => { if (e.key === 'Enter') handleQuickAdd(); });
+
+/* ---------------------- CSV EXPORT ---------------------- */
+function exportCSV() {
+  const rows = [['Date', 'Type', 'Title', 'Category', 'Wallet / From', 'To Wallet', 'Amount', 'Notes']];
+  sortedByDateDesc(state.transactions).forEach(t => {
+    rows.push([t.date, t.type, t.title, t.category, Utils.walletName(t.walletId || 'bank'), '', t.amount, (t.notes || '').replace(/[\r\n]+/g, ' ')]);
+  });
+  [...state.transfers].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).forEach(t => {
+    rows.push([t.date, 'transfer', t.note || 'Wallet transfer', '', Utils.walletName(t.fromWalletId), Utils.walletName(t.toWalletId), t.amount, '']);
+  });
+  const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `ledger-transactions-${Utils.todayISO()}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('CSV exported');
+}
+document.getElementById('exportCsvBtn').addEventListener('click', exportCSV);
+
+/* ---------------------- INIT ---------------------- */
+(function init() {
+  // No demo data: a new installation starts empty and existing data stays untouched.
+  document.getElementById('analyticsMonth').value = Utils.currentMonthKey();
+  document.getElementById('dailyDate').value = Utils.todayISO();
+  renderAll();
+})();
+</script>
+</body>
+</html>
