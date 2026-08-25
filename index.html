@@ -227,6 +227,12 @@
   #toast{ background:rgba(18,31,45,.8)!important; border:1px solid rgba(255,255,255,.18)!important; box-shadow:0 18px 50px rgba(0,0,0,.28); backdrop-filter:blur(22px); }
   ::-webkit-scrollbar-thumb{ background:linear-gradient(var(--cyan),var(--gold)); }
   .glass-button{ background:linear-gradient(135deg,rgba(255,255,255,.18),rgba(255,255,255,.07)); border:1px solid rgba(255,255,255,.22); box-shadow:inset 0 1px rgba(255,255,255,.2),0 8px 24px rgba(0,0,0,.12); backdrop-filter:blur(18px); }
+  .wallet-card{ position:relative; overflow:hidden; background:linear-gradient(135deg,rgba(255,255,255,.15),rgba(255,255,255,.055)); border:1px solid rgba(255,255,255,.18); border-radius:20px; padding:18px; }
+  .wallet-card.bank{ box-shadow:inset 0 1px rgba(255,255,255,.18),0 0 35px rgba(98,233,255,.08); }
+  .wallet-card.savings{ box-shadow:inset 0 1px rgba(255,255,255,.18),0 0 35px rgba(216,169,74,.08); }
+  .wallet-badge{ width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.15); }
+  .modal-panel{ overflow:visible!important; }
+
   @media (prefers-reduced-motion:reduce){ body::before,body::after{animation:none!important;} }
 
 </style>
@@ -265,6 +271,7 @@
   <nav class="max-w-6xl mx-auto px-4 sm:px-6 flex gap-5 text-sm font-medium overflow-x-auto">
     <button class="tab-btn py-2.5 whitespace-nowrap" data-tab="dashboard" data-active="true">Dashboard</button>
     <button class="tab-btn py-2.5 whitespace-nowrap" data-tab="transactions" data-active="false">Transactions</button>
+    <button class="tab-btn py-2.5 whitespace-nowrap" data-tab="wallets" data-active="false">Wallets</button>
     <button class="tab-btn py-2.5 whitespace-nowrap" data-tab="daily" data-active="false">Daily Summary</button>
     <button class="tab-btn py-2.5 whitespace-nowrap" data-tab="analytics" data-active="false">Analytics</button>
     <button class="tab-btn py-2.5 whitespace-nowrap" data-tab="emergency" data-active="false">Emergency Fund</button>
@@ -289,6 +296,25 @@
       <div class="card ruled p-5">
         <p class="text-xs uppercase tracking-wide text-ink-muted">Current Balance</p>
         <p id="totalBalance" class="figure text-2xl sm:text-3xl font-semibold mt-2">฿0.00</p>
+      </div>
+    </div>
+
+    <!-- Wallet balance summary -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="card p-5 sm:col-span-2">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <p class="text-xs uppercase tracking-wide text-ink-muted">Wallets</p>
+            <h2 class="font-display font-semibold text-base mt-1">Where your money lives</h2>
+          </div>
+          <button data-goto="wallets" class="text-xs text-ink-muted hover:underline">Manage →</button>
+        </div>
+        <div id="dashboardWalletList" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+      </div>
+      <div class="card ruled p-5">
+        <p class="text-xs uppercase tracking-wide text-ink-muted">Total Assets</p>
+        <p id="totalAssets" class="figure text-2xl sm:text-3xl font-semibold mt-2" style="color:var(--cyan)">฿0.00</p>
+        <p class="text-xs text-ink-muted mt-2">Bank + Savings</p>
       </div>
     </div>
 
@@ -363,6 +389,10 @@
           <option value="all">All</option>
         </select>
       </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1">Wallet</label>
+        <select id="filterWallet" class="px-3 py-2 rounded-md text-sm"></select>
+      </div>
       <button id="clearFiltersBtn" class="text-xs text-ink-muted hover:underline pb-2">Clear filters</button>
       <button id="openAddModalBtn" class="ml-auto px-4 py-2 rounded-card text-sm font-medium text-white" style="background:var(--ink);">
         + New Transaction
@@ -373,6 +403,39 @@
     <div class="card perforated overflow-hidden">
       <div id="txnList" class="divide-y" style="border-color:var(--hairline)"></div>
       <p id="txnEmpty" class="text-sm text-ink-muted px-5 py-10 text-center hidden">No transactions match these filters.</p>
+    </div>
+  </section>
+
+  <!-- ============================= WALLETS TAB ============================= -->
+  <section id="tab-wallets" class="space-y-4 hidden">
+    <div class="card p-5">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+          <p class="text-xs uppercase tracking-wide text-ink-muted">Wallet System</p>
+          <h2 class="font-display font-semibold text-xl mt-1">Your money, separated clearly</h2>
+          <p class="text-xs text-ink-muted mt-1">Transfers move assets between wallets and never count as income or expense.</p>
+        </div>
+        <button id="openTransferBtn" class="glass-button px-4 py-2.5 rounded-card text-sm font-medium">↔ Transfer money</button>
+      </div>
+      <div id="walletCards" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      <div class="mt-4 pt-4 border-t flex items-center justify-between" style="border-color:var(--hairline)">
+        <div>
+          <p class="text-xs uppercase tracking-wide text-ink-muted">Total Assets</p>
+          <p class="text-xs text-ink-muted mt-1">Bank + Savings</p>
+        </div>
+        <p id="walletTotalAssets" class="figure text-2xl font-semibold">฿0.00</p>
+      </div>
+    </div>
+
+    <div class="card p-5">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h2 class="font-display font-semibold text-base">Transfer History</h2>
+          <p class="text-xs text-ink-muted">Moving money between wallets does not change Total Assets.</p>
+        </div>
+      </div>
+      <div id="transferList" class="divide-y" style="border-color:var(--hairline)"></div>
+      <p id="transferEmpty" class="text-sm text-ink-muted py-8 text-center hidden">No transfers yet.</p>
     </div>
   </section>
 
@@ -529,6 +592,10 @@
         <label class="text-xs text-ink-muted block mb-1">Category</label>
         <select id="txnCategory" class="w-full px-3 py-2 rounded-md text-sm"></select>
       </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1">Wallet</label>
+        <select id="txnWallet" class="w-full px-3 py-2 rounded-md text-sm"></select>
+      </div>
 
       <div>
         <label class="text-xs text-ink-muted block mb-1">Notes (optional)</label>
@@ -539,6 +606,45 @@
         <button type="submit" class="flex-1 px-4 py-2.5 rounded-card text-sm font-medium text-white" style="background:var(--ink);">Save Transaction</button>
         <button type="button" id="deleteTxnBtn" class="hidden px-4 py-2.5 rounded-card text-sm font-medium" style="color:var(--expense); border:1px solid var(--expense);">Delete</button>
       </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================= TRANSFER MODAL ============================= -->
+<div id="transferBackdrop" class="modal-backdrop fixed inset-0 z-40 hidden items-center justify-center p-4">
+  <div class="modal-panel card w-full max-w-md p-5">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <p class="text-xs uppercase tracking-wide text-ink-muted">Asset transfer</p>
+        <h3 class="font-display font-semibold text-lg mt-1">Transfer between wallets</h3>
+      </div>
+      <button id="closeTransferBtn" class="text-ink-muted hover:text-ink text-xl leading-none">&times;</button>
+    </div>
+    <form id="transferForm" class="space-y-3">
+      <div>
+        <label class="text-xs text-ink-muted block mb-1">From</label>
+        <select id="transferFrom" class="w-full px-3 py-2 rounded-md text-sm"></select>
+      </div>
+      <div class="flex justify-center -my-1">
+        <span class="w-8 h-8 rounded-full flex items-center justify-center" style="background:rgba(98,233,255,.12);color:var(--cyan)">↓</span>
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1">To</label>
+        <select id="transferTo" class="w-full px-3 py-2 rounded-md text-sm"></select>
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1">Amount</label>
+        <input id="transferAmount" required type="number" min="0.01" step="0.01" placeholder="0.00" class="figure w-full px-3 py-2 rounded-md text-sm" />
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1">Date</label>
+        <input id="transferDate" required type="date" class="w-full px-3 py-2 rounded-md text-sm" />
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1">Note (optional)</label>
+        <input id="transferNote" type="text" placeholder="e.g. Monthly savings" class="w-full px-3 py-2 rounded-md text-sm" />
+      </div>
+      <button type="submit" class="w-full px-4 py-2.5 rounded-card text-sm font-medium text-white" style="background:var(--ink);">Confirm Transfer</button>
     </form>
   </div>
 </div>
@@ -567,6 +673,8 @@ const LS_KEYS = {
   transactions: 'ledger_transactions',
   budget: 'ledger_monthly_budget',
   theme: 'ledger_theme',
+  wallets: 'ledger_wallets',
+  transfers: 'ledger_transfers',
 };
 
 /* ---------------------- STORAGE MODULE ----------------------
@@ -579,6 +687,26 @@ const Storage = {
   },
   saveTransactions(list) {
     localStorage.setItem(LS_KEYS.transactions, JSON.stringify(list));
+  },
+  getWallets() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(LS_KEYS.wallets));
+      if (Array.isArray(saved) && saved.length) return saved;
+    } catch {}
+    return [
+      { id: 'bank', name: 'Bank Wallet', type: 'bank', openingBalance: 0 },
+      { id: 'savings', name: 'Savings Wallet', type: 'savings', openingBalance: 0 },
+    ];
+  },
+  saveWallets(list) {
+    localStorage.setItem(LS_KEYS.wallets, JSON.stringify(list));
+  },
+  getTransfers() {
+    try { return JSON.parse(localStorage.getItem(LS_KEYS.transfers)) || []; }
+    catch { return []; }
+  },
+  saveTransfers(list) {
+    localStorage.setItem(LS_KEYS.transfers, JSON.stringify(list));
   },
   getBudget() {
     const v = localStorage.getItem(LS_KEYS.budget);
@@ -598,10 +726,38 @@ const Storage = {
 /* ---------------------- STATE ---------------------- */
 let state = {
   transactions: Storage.getTransactions(),
+  transfers: Storage.getTransfers(),
+  wallets: Storage.getWallets(),
   budget: Storage.getBudget(),
-  filters: { month: '', type: 'all', category: 'all' },
+  filters: { month: '', type: 'all', category: 'all', wallet: 'all' },
   activeTab: 'dashboard',
 };
+
+// Existing V5 transactions predate Wallet System. Keep them intact and
+// assign them to the main Bank Wallet so old data is never lost.
+let walletsChangedByMigration = false;
+state.wallets = state.wallets.map(w => ({
+  id: w.id,
+  name: w.name,
+  type: w.type,
+  openingBalance: Number(w.openingBalance) || 0
+}));
+if (!state.wallets.some(w => w.id === 'bank')) {
+  state.wallets.unshift({ id: 'bank', name: 'Bank Wallet', type: 'bank', openingBalance: 0 });
+  walletsChangedByMigration = true;
+}
+if (!state.wallets.some(w => w.id === 'savings')) {
+  state.wallets.push({ id: 'savings', name: 'Savings Wallet', type: 'savings', openingBalance: 0 });
+  walletsChangedByMigration = true;
+}
+state.transactions = state.transactions.map(t => {
+  if (!t.walletId) { walletsChangedByMigration = true; return { ...t, walletId: 'bank' }; }
+  return t;
+});
+if (walletsChangedByMigration) {
+  Storage.saveWallets(state.wallets);
+  Storage.saveTransactions(state.transactions);
+}
 
 /* ---------------------- UTILS ---------------------- */
 const Utils = {
@@ -639,6 +795,14 @@ const Utils = {
   categoryColor(key) {
     const c = CATEGORIES.find(c => c.key === key);
     return c ? c.color : '#6B7280';
+  },
+  walletName(id) {
+    const w = state.wallets.find(w => w.id === id);
+    return w ? w.name : 'Bank Wallet';
+  },
+  walletIcon(id) {
+    const w = state.wallets.find(w => w.id === id);
+    return w && w.type === 'savings' ? '💰' : '🏦';
   }
 };
 
@@ -672,12 +836,13 @@ applyTheme(Storage.getTheme());
 /* ---------------------- TABS ---------------------- */
 function showTab(name) {
   state.activeTab = name;
-  ['dashboard', 'transactions', 'daily', 'analytics', 'emergency'].forEach(t => {
+  ['dashboard', 'transactions', 'wallets', 'daily', 'analytics', 'emergency'].forEach(t => {
     document.getElementById('tab-' + t).classList.toggle('hidden', t !== name);
   });
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.dataset.active = String(btn.dataset.tab === name);
   });
+  if (name === 'wallets') renderWallets();
   if (name === 'daily') renderDailySummary();
   if (name === 'analytics') renderChart();
   if (name === 'emergency') renderEmergencyFund();
@@ -700,7 +865,22 @@ function populateCategorySelects() {
     formSel.appendChild(opt2);
   });
 }
+function populateWalletSelects() {
+  const filter = document.getElementById('filterWallet');
+  const txn = document.getElementById('txnWallet');
+  const from = document.getElementById('transferFrom');
+  const to = document.getElementById('transferTo');
+  filter.innerHTML = '<option value="all">All wallets</option>';
+  [txn, from, to].forEach(sel => sel.innerHTML = '');
+  state.wallets.forEach(w => {
+    const label = `${w.type === 'savings' ? '💰' : '🏦'} ${w.name}`;
+    const add = (sel, value=w.id) => { const o=document.createElement('option'); o.value=value; o.textContent=label; sel.appendChild(o); };
+    add(filter); filter.lastElementChild.value = w.id;
+    add(txn); add(from); add(to);
+  });
+}
 populateCategorySelects();
+populateWalletSelects();
 
 /* ---------------------- COMPUTATIONS ---------------------- */
 function computeTotals(list) {
@@ -708,11 +888,31 @@ function computeTotals(list) {
   list.forEach(t => { if (t.type === 'income') income += Number(t.amount); else expense += Number(t.amount); });
   return { income, expense, balance: income - expense };
 }
+function walletBalance(walletId) {
+  const wallet = state.wallets.find(w => w.id === walletId);
+  if (!wallet) return 0;
+  let balance = Number(wallet.openingBalance) || 0;
+  state.transactions.forEach(t => {
+    if ((t.walletId || 'bank') !== walletId) return;
+    const amount = Number(t.amount) || 0;
+    balance += t.type === 'income' ? amount : -amount;
+  });
+  state.transfers.forEach(t => {
+    const amount = Number(t.amount) || 0;
+    if (t.fromWalletId === walletId) balance -= amount;
+    if (t.toWalletId === walletId) balance += amount;
+  });
+  return balance;
+}
+function totalAssets() {
+  return state.wallets.reduce((sum, w) => sum + walletBalance(w.id), 0);
+}
 function applyFilters(list) {
   return list.filter(t => {
     if (state.filters.month && Utils.monthKey(t.date) !== state.filters.month) return false;
     if (state.filters.type !== 'all' && t.type !== state.filters.type) return false;
     if (state.filters.category !== 'all' && t.category !== state.filters.category) return false;
+    if (state.filters.wallet !== 'all' && (t.walletId || 'bank') !== state.filters.wallet) return false;
     return true;
   });
 }
@@ -741,6 +941,20 @@ function renderSummary() {
   const balEl = document.getElementById('totalBalance');
   balEl.textContent = Utils.fmtMoney(balance);
   balEl.style.color = balance < 0 ? 'var(--expense)' : 'var(--ink)';
+  document.getElementById('totalAssets').textContent = Utils.fmtMoney(totalAssets());
+  const list = document.getElementById('dashboardWalletList');
+  list.innerHTML = state.wallets.map(w => {
+    const bal = walletBalance(w.id);
+    return `<button class="wallet-card ${w.type} text-left" data-wallet-tab="${w.id}">
+      <div class="flex items-center gap-3">
+        <span class="wallet-badge">${w.type === 'savings' ? '💰' : '🏦'}</span>
+        <div><p class="text-xs text-ink-muted">${w.type === 'savings' ? 'Savings Wallet' : 'Bank Account Wallet'}</p><p class="font-medium text-sm">${escapeHTML(w.name)}</p></div>
+      </div>
+      <p class="figure text-xl font-semibold mt-4">${Utils.fmtMoney(bal)}</p>
+      <p class="text-xs text-ink-muted mt-1">${w.type === 'savings' ? 'Kept separate from everyday spending' : 'Main spending wallet'}</p>
+    </button>`;
+  }).join('');
+  list.querySelectorAll('[data-wallet-tab]').forEach(el => el.addEventListener('click', () => showTab('wallets')));
 }
 function renderBudget() {
   const monthKey = Utils.currentMonthKey();
@@ -789,7 +1003,7 @@ function txnRowHTML(t) {
       </div>
       <div class="min-w-0 flex-1">
         <p class="text-sm font-medium truncate">${escapeHTML(t.title)}</p>
-        <p class="text-xs text-ink-muted">${t.category} · ${Utils.fmtDateHuman(t.date)}</p>
+        <p class="text-xs text-ink-muted">${t.category} · ${Utils.walletIcon(t.walletId || 'bank')} ${Utils.walletName(t.walletId || 'bank')} · ${Utils.fmtDateHuman(t.date)}</p>
       </div>
       <p class="figure text-sm font-semibold shrink-0" style="color:${color}">${sign}${Utils.fmtMoney(t.amount)}</p>
     </div>`;
@@ -814,6 +1028,89 @@ function renderTransactionList() {
   document.getElementById('txnEmpty').classList.toggle('hidden', sorted.length > 0);
   container.querySelectorAll('[data-edit]').forEach(el => el.addEventListener('click', () => openModal(el.dataset.edit)));
 }
+
+/* ---------------------- RENDER: WALLETS ---------------------- */
+function renderWallets() {
+  const cards = document.getElementById('walletCards');
+  cards.innerHTML = state.wallets.map(w => {
+    const bal = walletBalance(w.id);
+    const txCount = state.transactions.filter(t => (t.walletId || 'bank') === w.id).length;
+    const transferIn = state.transfers.filter(t => t.toWalletId === w.id).reduce((s,t)=>s+Number(t.amount),0);
+    const transferOut = state.transfers.filter(t => t.fromWalletId === w.id).reduce((s,t)=>s+Number(t.amount),0);
+    return `<div class="wallet-card ${w.type}">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <span class="wallet-badge">${w.type === 'savings' ? '💰' : '🏦'}</span>
+          <div><p class="font-semibold">${escapeHTML(w.name)}</p><p class="text-xs text-ink-muted">${w.type === 'savings' ? 'Savings Wallet' : 'Bank Account Wallet'}</p></div>
+        </div>
+        <span class="text-xs px-2 py-1 rounded-full" style="background:rgba(255,255,255,.08);color:var(--ink-muted)">${txCount} txns</span>
+      </div>
+      <p class="figure text-3xl font-semibold mt-5">${Utils.fmtMoney(bal)}</p>
+      <div class="grid grid-cols-3 gap-2 mt-4 text-xs">
+        <label class="block"><span class="text-ink-muted">Opening</span><input data-opening="${w.id}" type="number" min="0" step="0.01" value="${Number(w.openingBalance)||0}" class="figure mt-1 w-full px-2 py-1.5 rounded-md text-xs"></label>
+        <div><span class="text-ink-muted">Transfer in</span><p class="figure mt-1">${Utils.fmtMoney(transferIn)}</p></div>
+        <div><span class="text-ink-muted">Transfer out</span><p class="figure mt-1">${Utils.fmtMoney(transferOut)}</p></div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('walletTotalAssets').textContent = Utils.fmtMoney(totalAssets());
+  cards.querySelectorAll('[data-opening]').forEach(input => {
+    input.addEventListener('change', e => {
+      const w = state.wallets.find(x => x.id === e.target.dataset.opening);
+      if (!w) return;
+      w.openingBalance = Math.max(0, Number(e.target.value) || 0);
+      Storage.saveWallets(state.wallets);
+      renderAll();
+      toast('Wallet opening balance updated');
+    });
+  });
+
+  const list = document.getElementById('transferList');
+  const transfers = [...state.transfers].sort((a,b)=>(b.date||'').localeCompare(a.date||'') || b.id.localeCompare(a.id));
+  list.innerHTML = transfers.map(t => `<div class="flex items-center gap-3 px-1 py-3">
+    <div class="w-9 h-9 rounded-full flex items-center justify-center" style="background:rgba(98,233,255,.12);color:var(--cyan)">↔</div>
+    <div class="min-w-0 flex-1"><p class="text-sm font-medium truncate">${escapeHTML(t.note || 'Wallet transfer')}</p>
+      <p class="text-xs text-ink-muted">${Utils.walletName(t.fromWalletId)} → ${Utils.walletName(t.toWalletId)} · ${Utils.fmtDateHuman(t.date)}</p></div>
+    <p class="figure text-sm font-semibold">฿${Number(t.amount).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</p>
+  </div>`).join('');
+  document.getElementById('transferEmpty').classList.toggle('hidden', transfers.length > 0);
+}
+function openTransferModal() {
+  populateWalletSelects();
+  document.getElementById('transferDate').value = Utils.todayISO();
+  document.getElementById('transferAmount').value = '';
+  document.getElementById('transferNote').value = '';
+  document.getElementById('transferBackdrop').classList.remove('hidden');
+  document.getElementById('transferBackdrop').classList.add('flex');
+}
+function closeTransferModal() {
+  document.getElementById('transferBackdrop').classList.add('hidden');
+  document.getElementById('transferBackdrop').classList.remove('flex');
+}
+document.getElementById('openTransferBtn').addEventListener('click', openTransferModal);
+document.getElementById('closeTransferBtn').addEventListener('click', closeTransferModal);
+document.getElementById('transferBackdrop').addEventListener('click', e => { if (e.target.id === 'transferBackdrop') closeTransferModal(); });
+document.getElementById('transferForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const from = document.getElementById('transferFrom').value;
+  const to = document.getElementById('transferTo').value;
+  const amount = Math.abs(Number(document.getElementById('transferAmount').value) || 0);
+  if (!from || !to || from === to) { toast('Choose two different wallets'); return; }
+  if (amount <= 0) { toast('Enter a valid amount'); return; }
+  if (amount > walletBalance(from)) { toast('Not enough balance in the source wallet'); return; }
+  state.transfers.push({
+    id: Utils.uid().replace(/^t_/,'x_'),
+    fromWalletId: from,
+    toWalletId: to,
+    amount,
+    date: document.getElementById('transferDate').value || Utils.todayISO(),
+    note: document.getElementById('transferNote').value.trim()
+  });
+  Storage.saveTransfers(state.transfers);
+  closeTransferModal();
+  renderAll();
+  toast('Transfer completed');
+});
 
 /* ---------------------- RENDER: DAILY SUMMARY ---------------------- */
 function renderDailySummary() {
@@ -919,6 +1216,7 @@ document.getElementById('currentSavings').addEventListener('input', renderEmerge
 /* ---------------------- MASTER RENDER ---------------------- */
 function renderAll() {
   renderSummary();
+  renderWallets();
   renderBudget();
   renderRecent();
   renderTransactionList();
@@ -931,11 +1229,13 @@ function renderAll() {
 document.getElementById('filterMonth').addEventListener('change', e => { state.filters.month = e.target.value; renderTransactionList(); });
 document.getElementById('filterType').addEventListener('change', e => { state.filters.type = e.target.value; renderTransactionList(); });
 document.getElementById('filterCategory').addEventListener('change', e => { state.filters.category = e.target.value; renderTransactionList(); });
+document.getElementById('filterWallet').addEventListener('change', e => { state.filters.wallet = e.target.value; renderTransactionList(); });
 document.getElementById('clearFiltersBtn').addEventListener('click', () => {
-  state.filters = { month: '', type: 'all', category: 'all' };
+  state.filters = { month: '', type: 'all', category: 'all', wallet: 'all' };
   document.getElementById('filterMonth').value = '';
   document.getElementById('filterType').value = 'all';
   document.getElementById('filterCategory').value = 'all';
+  document.getElementById('filterWallet').value = 'all';
   renderTransactionList();
 });
 document.getElementById('analyticsMonth').addEventListener('change', renderChart);
@@ -976,6 +1276,7 @@ function openModal(id = null) {
     document.getElementById('txnAmount').value = t.amount;
     document.getElementById('txnDate').value = t.date;
     document.getElementById('txnCategory').value = t.category;
+    document.getElementById('txnWallet').value = t.walletId || 'bank';
     document.getElementById('txnNotes').value = t.notes || '';
     setModalType(t.type);
     document.getElementById('deleteTxnBtn').classList.remove('hidden');
@@ -984,6 +1285,7 @@ function openModal(id = null) {
     document.getElementById('modalTitle').textContent = 'New Transaction';
     document.getElementById('txnId').value = '';
     document.getElementById('txnDate').value = Utils.todayISO();
+    document.getElementById('txnWallet').value = 'bank';
     setModalType('expense');
     document.getElementById('deleteTxnBtn').classList.add('hidden');
   }
@@ -1008,6 +1310,7 @@ document.getElementById('txnForm').addEventListener('submit', e => {
     title: document.getElementById('txnTitle').value.trim() || 'Untitled',
     amount: Math.abs(parseFloat(document.getElementById('txnAmount').value) || 0),
     category: document.getElementById('txnCategory').value,
+    walletId: document.getElementById('txnWallet').value || 'bank',
     date: document.getElementById('txnDate').value || Utils.todayISO(),
     notes: document.getElementById('txnNotes').value.trim(),
   };
@@ -1053,9 +1356,12 @@ document.getElementById('quickAddInput').addEventListener('keydown', e => { if (
 
 /* ---------------------- CSV EXPORT ---------------------- */
 function exportCSV() {
-  const rows = [['Date', 'Type', 'Title', 'Category', 'Amount', 'Notes']];
+  const rows = [['Date', 'Type', 'Title', 'Category', 'Wallet / From', 'To Wallet', 'Amount', 'Notes']];
   sortedByDateDesc(state.transactions).forEach(t => {
-    rows.push([t.date, t.type, t.title, t.category, t.amount, (t.notes || '').replace(/[\r\n]+/g, ' ')]);
+    rows.push([t.date, t.type, t.title, t.category, Utils.walletName(t.walletId || 'bank'), '', t.amount, (t.notes || '').replace(/[\r\n]+/g, ' ')]);
+  });
+  [...state.transfers].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).forEach(t => {
+    rows.push([t.date, 'transfer', t.note || 'Wallet transfer', '', Utils.walletName(t.fromWalletId), Utils.walletName(t.toWalletId), t.amount, '']);
   });
   const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
