@@ -1,0 +1,2665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ledger — Personal Finance Tracker · THB</title>
+
+<!-- Google Fonts: Prompt (Thai), Plus Jakarta Sans (English), Inter, JetBrains Mono (Figures) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+<!-- Tailwind (Play CDN) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: {
+          display: ['Plus Jakarta Sans', 'Prompt', 'Inter', 'sans-serif'],
+          body: ['Plus Jakarta Sans', 'Prompt', 'Inter', 'sans-serif'],
+          mono: ['JetBrains Mono', 'Inter', 'monospace'],
+        },
+        colors: {
+          ink: 'var(--ink)',
+          'ink-muted': 'var(--ink-muted)',
+          canvas: 'var(--canvas)',
+          surface: 'var(--surface)',
+          'surface-2': 'var(--surface-2)',
+          hairline: 'var(--hairline)',
+          gold: 'var(--gold)',
+          income: 'var(--income)',
+          expense: 'var(--expense)',
+          accent: 'var(--accent)',
+          cyan: 'var(--cyan)',
+        },
+        borderRadius: { card: '16px' },
+      }
+    }
+  }
+</script>
+
+<!-- Chart.js for the category pie chart -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+<style>
+  /* ================================================================
+     CYBER LUXE FINTECH THEME TOKENS
+     ================================================================ */
+  :root {
+    /* LIGHT THEME (Soft Warm Cashmere & Luxe Slate) */
+    --canvas: #F4F6F9;
+    --surface: #FFFFFF;
+    --surface-2: #EAEFF5;
+    --surface-glass: rgba(255, 255, 255, 0.88);
+    --hairline: rgba(203, 213, 225, 0.8);
+    --ink: #0F172A;
+    --ink-muted: #64748B;
+    --gold: #D97706;
+    --income: #059669;
+    --expense: #E11D48;
+    --cyan: #2563EB;
+    --accent: #4F46E5;
+    --shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 12px 32px -4px rgba(15, 23, 42, 0.04);
+    --modal-bg: rgba(255, 255, 255, 0.96);
+    --card-highlight: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.3));
+    --aura-opacity: 0.22;
+  }
+
+  html.dark {
+    /* DARK THEME (Deep OLED Obsidian & Cyber Velvet) */
+    --canvas: #07090E;
+    --surface: #0E131F;
+    --surface-2: #161D2E;
+    --surface-glass: rgba(14, 19, 31, 0.82);
+    --hairline: rgba(255, 255, 255, 0.09);
+    --ink: #F8FAFC;
+    --ink-muted: #94A3B8;
+    --gold: #F59E0B;
+    --income: #10B981;
+    --expense: #F43F5E;
+    --cyan: #38BDF8;
+    --accent: #6366F1;
+    --shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    --modal-bg: rgba(14, 19, 31, 0.94);
+    --card-highlight: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.02));
+    --aura-opacity: 0.35;
+  }
+
+  html, body {
+    min-height: 100%;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: 'Plus Jakarta Sans', 'Prompt', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  body {
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Multi-color Ambient Nebula Float */
+  body::before, body::after {
+    content: "";
+    position: fixed;
+    z-index: -2;
+    pointer-events: none;
+    width: 60vw;
+    height: 60vw;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: var(--aura-opacity);
+    animation: liquidFloat 22s ease-in-out infinite alternate;
+  }
+
+  body::before {
+    left: -18vw;
+    top: -18vw;
+    background: radial-gradient(circle at 40% 40%, #6366F1 0, rgba(99, 102, 241, 0.2) 40%, transparent 70%),
+                radial-gradient(circle at 75% 75%, #06B6D4 0, transparent 60%);
+  }
+
+  body::after {
+    right: -18vw;
+    bottom: -18vw;
+    background: radial-gradient(circle at 40% 40%, #EC4899 0, rgba(236, 72, 153, 0.18) 40%, transparent 70%),
+                radial-gradient(circle at 70% 60%, #F59E0B 0, transparent 60%);
+    animation-delay: -11s;
+  }
+
+  @keyframes liquidFloat {
+    from { transform: translate3d(-3%, 2%, 0) scale(1); }
+    to { transform: translate3d(4%, -3%, 0) scale(1.08); }
+  }
+
+  /* Typography */
+  .figure {
+    font-family: 'JetBrains Mono', 'Inter', monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.025em;
+  }
+  h1, .font-display {
+    font-family: 'Plus Jakarta Sans', 'Prompt', 'Inter', sans-serif !important;
+  }
+
+  /* Cards with Glass Highlight Edge */
+  .card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 22px;
+    box-shadow: var(--shadow);
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+  }
+
+  html.dark .card {
+    background: var(--surface-glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .card:hover {
+    border-color: color-mix(in srgb, var(--accent) 30%, var(--hairline));
+  }
+
+  /* Stat Card Gradient Badges */
+  .stat-card {
+    position: relative;
+    overflow: hidden;
+    padding: 22px;
+    border-radius: 22px;
+    border: 1px solid var(--hairline);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  html.dark .stat-card {
+    background: var(--surface-glass);
+    backdrop-filter: blur(20px);
+  }
+  .stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 36px -6px rgba(0, 0, 0, 0.12);
+  }
+
+  /* Header Bar */
+  header {
+    background: var(--surface-glass) !important;
+    border-color: var(--hairline) !important;
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Segmented Floating Pill Tab Bar */
+  .nav-capsule {
+    background: var(--surface-2);
+    border: 1px solid var(--hairline);
+    border-radius: 16px;
+    padding: 4px;
+  }
+
+  .tab-btn {
+    position: relative;
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--ink-muted);
+  }
+  .tab-btn[data-active="true"] {
+    background: var(--surface) !important;
+    color: var(--ink) !important;
+    font-weight: 600;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  }
+  html.dark .tab-btn[data-active="true"] {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+
+  /* Buttons */
+  button {
+    font-family: inherit;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  button:hover { transform: translateY(-1px); }
+  button:active { transform: translateY(0) scale(0.98); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #4F46E5, #3B82F6) !important;
+    color: #FFFFFF !important;
+    font-weight: 600;
+    border: none;
+    box-shadow: 0 4px 16px rgba(79, 70, 229, 0.35);
+  }
+  .btn-primary:hover {
+    box-shadow: 0 6px 22px rgba(79, 70, 229, 0.5);
+  }
+
+  .btn-action {
+    background: var(--ink) !important;
+    color: var(--canvas) !important;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  }
+
+  /* Luxury Bank / Credit Cards for Wallets */
+  .wallet-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 24px;
+    padding: 24px;
+    border: 1px solid var(--hairline);
+    box-shadow: var(--shadow);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+  }
+  .wallet-card:hover {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.18);
+  }
+
+  /* Shimmer Reflection Stripe on Wallet Cards */
+  .wallet-card::after {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(60deg, transparent 40%, rgba(255, 255, 255, 0.08) 50%, transparent 60%);
+    pointer-events: none;
+    transform: rotate(25deg);
+  }
+
+  html:not(.dark) .wallet-card.bank {
+    background: linear-gradient(135deg, #0F172A, #1E293B);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #FFFFFF;
+  }
+  html:not(.dark) .wallet-card.bank .text-ink-muted { color: #94A3B8 !important; }
+  html:not(.dark) .wallet-card.bank p { color: #FFFFFF; }
+  html:not(.dark) .wallet-card.bank .figure { color: #F8FAFC; }
+  html:not(.dark) .wallet-card.bank .btn-action { background: #FFFFFF !important; color: #0F172A !important; }
+
+  html:not(.dark) .wallet-card.savings {
+    background: linear-gradient(135deg, #78350F, #B45309);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #FFFFFF;
+  }
+  html:not(.dark) .wallet-card.savings .text-ink-muted { color: #FDE68A !important; }
+  html:not(.dark) .wallet-card.savings p { color: #FFFFFF; }
+  html:not(.dark) .wallet-card.savings .figure { color: #FFFBEB; }
+  html:not(.dark) .wallet-card.savings .btn-action { background: #FFFBEB !important; color: #78350F !important; }
+
+  html.dark .wallet-card.bank {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.22), rgba(15, 23, 42, 0.95));
+    border-color: rgba(56, 189, 248, 0.35);
+    box-shadow: 0 12px 36px -4px rgba(37, 99, 235, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+  }
+  html.dark .wallet-card.savings {
+    background: linear-gradient(135deg, rgba(217, 119, 6, 0.22), rgba(20, 27, 41, 0.95));
+    border-color: rgba(251, 191, 36, 0.35);
+    box-shadow: 0 12px 36px -4px rgba(217, 119, 6, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+  }
+
+  .wallet-badge {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+  }
+
+  /* Quick Add Omnibar */
+  .omnibar {
+    background: var(--surface);
+    border: 1.5px solid var(--hairline);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    transition: all 0.2s ease;
+  }
+  .omnibar:focus-within {
+    border-color: #6366F1;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.18), 0 12px 32px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Modals */
+  .modal-backdrop {
+    background: rgba(7, 9, 14, 0.65) !important;
+    backdrop-filter: blur(14px) !important;
+    -webkit-backdrop-filter: blur(14px) !important;
+  }
+  .modal-panel {
+    background: var(--modal-bg) !important;
+    border: 1px solid var(--hairline) !important;
+    border-radius: 28px !important;
+    box-shadow: 0 28px 70px rgba(0, 0, 0, 0.35) !important;
+    backdrop-filter: blur(28px) !important;
+    -webkit-backdrop-filter: blur(28px) !important;
+    animation: modalPop 0.18s ease-out;
+  }
+  @keyframes modalPop {
+    from { opacity: 0; transform: translateY(10px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* Rows */
+  .row-enter {
+    animation: fadein 0.16s ease-out;
+    border-bottom: 1px solid var(--hairline);
+    transition: all 0.15s ease;
+  }
+  .row-enter:last-child { border-bottom: none; }
+  .row-enter:hover {
+    background: var(--surface-2) !important;
+    transform: translateX(3px);
+  }
+
+  /* Inputs & Selects */
+  input, select, textarea {
+    background: var(--surface-2) !important;
+    border: 1px solid var(--hairline) !important;
+    border-radius: 12px !important;
+    color: var(--ink) !important;
+    padding: 8px 12px;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent) !important;
+  }
+  html.dark select { color-scheme: dark; }
+  html:not(.dark) select { color-scheme: light; }
+  select option, select optgroup { color: var(--ink) !important; background: var(--surface) !important; }
+
+  /* Toast */
+  #toast {
+    background: var(--ink) !important;
+    color: var(--canvas) !important;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28);
+    border-radius: 14px;
+    font-weight: 500;
+  }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar { width: 7px; height: 7px; }
+  ::-webkit-scrollbar-thumb { background: var(--hairline); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ink-muted); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, body::before, body::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+
+<body class="font-body min-h-screen">
+
+<!-- ============================= HEADER ============================= -->
+<header class="sticky top-0 z-30 backdrop-blur border-b" style="border-color:var(--hairline); background:color-mix(in srgb, var(--canvas) 85%, transparent);">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-2xl flex items-center justify-center font-display font-bold text-base shrink-0 shadow-sm"
+           style="background: linear-gradient(135deg, #6366F1, #3B82F6); color:#FFFFFF;">
+        ฿
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-display font-extrabold text-xl leading-none tracking-tight">
+            <span class="bg-gradient-to-r from-blue-500 via-indigo-500 to-amber-500 bg-clip-text text-transparent">Ledger</span>
+          </h1>
+          <span class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider"
+                style="background:color-mix(in srgb, var(--accent) 15%, transparent); color:var(--accent); border:1px solid color-mix(in srgb, var(--accent) 30%, transparent);">
+            v6.2 Pro
+          </span>
+        </div>
+        <p class="text-[11px] text-ink-muted mt-0.5 hidden sm:block" data-i18n="app_tagline">Personal finance, kept honestly</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <!-- Language Switcher -->
+      <button id="langToggle" title="Switch Language / สลับภาษา"
+        class="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl border hover:bg-surface-2 font-semibold transition"
+        style="border-color:var(--hairline); background:var(--surface);">
+        <span id="langFlag">🇹🇭</span>
+        <span id="langLabel" class="tracking-wide">TH</span>
+      </button>
+
+      <button id="backupBtn" title="Backup & Restore data"
+        class="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl border hover:bg-surface-2 transition"
+        style="border-color:var(--hairline); background:var(--surface);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span class="hidden sm:inline" data-i18n="nav_backup">Backup</span>
+      </button>
+      <button id="exportCsvBtn" title="Export all transactions to CSV"
+        class="flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl border hover:bg-surface-2 transition"
+        style="border-color:var(--hairline); background:var(--surface);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 21h16"/></svg>
+        <span class="hidden sm:inline" data-i18n="nav_export_csv">Export CSV</span>
+      </button>
+      <button id="themeToggle" title="Toggle dark / light mode"
+        class="w-9 h-9 flex items-center justify-center rounded-xl border hover:bg-surface-2 transition"
+        style="border-color:var(--hairline); background:var(--surface);">
+        <svg id="iconSun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg id="iconMoon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="hidden"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Capsule Tab Bar -->
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 pb-3">
+    <nav class="nav-capsule flex gap-1 text-sm font-medium overflow-x-auto">
+      <button class="tab-btn whitespace-nowrap" data-tab="dashboard" data-active="true" data-i18n="tab_dashboard">Dashboard</button>
+      <button class="tab-btn whitespace-nowrap" data-tab="transactions" data-active="false" data-i18n="tab_transactions">Transactions</button>
+      <button class="tab-btn whitespace-nowrap" data-tab="wallets" data-active="false" data-i18n="tab_wallets">Wallets</button>
+      <button class="tab-btn whitespace-nowrap" data-tab="daily" data-active="false" data-i18n="tab_daily">Daily Summary</button>
+      <button class="tab-btn whitespace-nowrap" data-tab="analytics" data-active="false" data-i18n="tab_analytics">Analytics</button>
+      <button class="tab-btn whitespace-nowrap" data-tab="emergency" data-active="false" data-i18n="tab_emergency">Emergency Fund</button>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+  <!-- ============================= DASHBOARD TAB ============================= -->
+  <section id="tab-dashboard" class="space-y-6">
+
+    <!-- Summary cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="stat-card flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-lg"
+                style="background:color-mix(in srgb, var(--income) 15%, transparent); color:var(--income);">
+            ↗
+          </span>
+          <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+                style="background:color-mix(in srgb, var(--income) 12%, transparent); color:var(--income);">
+            + Inflow
+          </span>
+        </div>
+        <div class="mt-4">
+          <p class="text-xs font-medium uppercase tracking-wider text-ink-muted" data-i18n="total_income">Total Income</p>
+          <p id="totalIncome" class="figure text-2xl sm:text-3xl font-extrabold mt-1 tracking-tight" style="color:var(--income)">฿0.00</p>
+        </div>
+      </div>
+
+      <div class="stat-card flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-lg"
+                style="background:color-mix(in srgb, var(--expense) 15%, transparent); color:var(--expense);">
+            ↘
+          </span>
+          <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+                style="background:color-mix(in srgb, var(--expense) 12%, transparent); color:var(--expense);">
+            − Outflow
+          </span>
+        </div>
+        <div class="mt-4">
+          <p class="text-xs font-medium uppercase tracking-wider text-ink-muted" data-i18n="total_expense">Total Expense</p>
+          <p id="totalExpense" class="figure text-2xl sm:text-3xl font-extrabold mt-1 tracking-tight" style="color:var(--expense)">฿0.00</p>
+        </div>
+      </div>
+
+      <div class="stat-card flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-lg"
+                style="background:color-mix(in srgb, var(--accent) 15%, transparent); color:var(--accent);">
+            ✦
+          </span>
+          <span class="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+                style="background:color-mix(in srgb, var(--accent) 12%, transparent); color:var(--accent);">
+            ● Net Total
+          </span>
+        </div>
+        <div class="mt-4">
+          <p class="text-xs font-medium uppercase tracking-wider text-ink-muted" data-i18n="current_balance">Current Balance</p>
+          <p id="totalBalance" class="figure text-2xl sm:text-3xl font-extrabold mt-1 tracking-tight">฿0.00</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wallet balance summary -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="card p-6 sm:col-span-2">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <p class="text-xs uppercase tracking-wider font-semibold text-ink-muted" data-i18n="wallets_title">Wallets</p>
+            <h2 class="font-display font-bold text-lg mt-0.5" data-i18n="wallets_subtitle">Where your money lives</h2>
+          </div>
+          <button data-goto="wallets" class="text-xs font-semibold px-3 py-1.5 rounded-lg border hover:bg-surface-2 transition" style="border-color:var(--hairline)" data-i18n="btn_manage">Manage →</button>
+        </div>
+        <div id="dashboardWalletList" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+      </div>
+
+      <div class="stat-card flex flex-col justify-between" style="border-color:color-mix(in srgb, var(--gold) 35%, var(--hairline));">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-lg"
+                  style="background:color-mix(in srgb, var(--gold) 15%, transparent); color:var(--gold);">
+              ⚡
+            </span>
+            <span class="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
+                  style="background:color-mix(in srgb, var(--gold) 12%, transparent); color:var(--gold); border:1px solid color-mix(in srgb, var(--gold) 25%, transparent);">
+              ● Active Portfolios
+            </span>
+          </div>
+          <div class="mt-5">
+            <p class="text-xs uppercase tracking-wider font-semibold text-ink-muted" data-i18n="total_assets">Total Assets</p>
+            <p id="totalAssets" class="figure text-3xl sm:text-4xl font-extrabold mt-1 tracking-tight" style="color:var(--gold)">฿0.00</p>
+            <p class="text-xs text-ink-muted mt-2 flex items-center gap-1.5" data-i18n="total_assets_sub">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Bank + Savings
+            </p>
+          </div>
+        </div>
+        <div class="mt-6 pt-4 border-t" style="border-color:var(--hairline)">
+          <button data-goto="wallets" class="w-full py-2 rounded-xl text-xs font-semibold btn-action flex items-center justify-center gap-1.5">
+            <span>View Asset Breakdown</span> <span>→</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Monthly budget -->
+    <div class="card p-5">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <div>
+          <h2 class="font-display font-semibold text-base">Monthly Budget</h2>
+          <p class="text-xs text-ink-muted" id="budgetMonthLabel">This month's spending against your limit</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-ink-muted">Limit</span>
+          <input id="budgetInput" type="number" min="0" step="1" placeholder="0.00"
+            class="figure w-28 px-2 py-1.5 rounded-md text-sm" />
+        </div>
+      </div>
+      <div class="w-full h-3 rounded-full overflow-hidden" style="background:var(--surface-2)">
+        <div id="budgetBar" class="h-full rounded-full" style="width:0%; background:var(--income); transition:width .3s ease, background-color .3s ease;"></div>
+      </div>
+      <div class="flex items-center justify-between mt-2">
+        <p id="budgetStatus" class="text-xs text-ink-muted">Set a monthly budget to track spending.</p>
+        <p id="budgetPct" class="figure text-xs text-ink-muted">0%</p>
+      </div>
+      <div id="budgetAlert" class="hidden mt-3 text-sm px-3 py-2 rounded-md" style="background:color-mix(in srgb, var(--expense) 12%, transparent); color:var(--expense);">
+        ⚠ You've crossed 80% of your monthly budget.
+      </div>
+    </div>
+
+    <!-- Recent transactions preview -->
+    <div class="card">
+      <div class="flex items-center justify-between p-5 pb-3">
+        <h2 class="font-display font-semibold text-base">Recent Activity</h2>
+        <button data-goto="transactions" class="text-xs text-ink-muted hover:underline">View all →</button>
+      </div>
+      <div id="recentList" class="divide-y" style="border-color:var(--hairline)"></div>
+      <p id="recentEmpty" class="text-sm text-ink-muted px-5 py-6 hidden">No transactions yet. Add your first one from the Transactions tab.</p>
+    </div>
+  </section>
+
+  <!-- ============================= TRANSACTIONS TAB ============================= -->
+  <section id="tab-transactions" class="space-y-4 hidden">
+
+    <!-- Quick add Omnibar -->
+    <div class="omnibar p-3.5 flex items-center gap-3">
+      <div class="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm shrink-0"
+           style="background:color-mix(in srgb, var(--accent) 15%, transparent); color:var(--accent);">
+        ⚡
+      </div>
+      <input id="quickAddInput" type="text" placeholder='Try "Lunch 60" — title then amount, Enter to open the form'
+        class="flex-1 bg-transparent border-0 outline-none text-sm font-medium focus:ring-0 !p-0 placeholder:text-ink-muted" style="background:transparent!important;border:none!important;box-shadow:none!important;" />
+      <div class="hidden sm:flex items-center gap-1.5 text-[11px] font-semibold text-ink-muted px-2 py-1 rounded-lg border" style="border-color:var(--hairline);background:var(--surface-2)">
+        <span>Press</span>
+        <kbd class="px-1.5 py-0.5 rounded bg-surface border font-mono text-[10px]" style="border-color:var(--hairline)">Enter ↵</kbd>
+      </div>
+      <button id="quickAddBtn" class="btn-primary px-4 py-2 rounded-xl text-xs font-semibold" data-i18n="btn_add">
+        Add
+      </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="card p-4 flex flex-wrap gap-3 items-end">
+      <div class="flex-1 min-w-[160px]">
+        <label class="text-xs text-ink-muted block mb-1" data-i18n="filter_search">Search</label>
+        <input id="filterSearch" type="text" placeholder="Search title, note..." class="w-full px-3 py-2 rounded-md text-sm" />
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1" data-i18n="filter_month">Month</label>
+        <input id="filterMonth" type="month" class="px-3 py-2 rounded-md text-sm" />
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1" data-i18n="filter_type">Type</label>
+        <select id="filterType" class="px-3 py-2 rounded-md text-sm">
+          <option value="all" data-i18n="type_all">All</option>
+          <option value="income" data-i18n="type_income">Income</option>
+          <option value="expense" data-i18n="type_expense">Expense</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1" data-i18n="filter_category">Category</label>
+        <select id="filterCategory" class="px-3 py-2 rounded-md text-sm">
+          <option value="all">All</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1" data-i18n="filter_wallet">Wallet</label>
+        <select id="filterWallet" class="px-3 py-2 rounded-md text-sm"></select>
+      </div>
+      <button id="clearFiltersBtn" class="text-xs text-ink-muted hover:underline pb-2" data-i18n="clear_filters">Clear filters</button>
+      
+      <div class="ml-auto flex items-center gap-2">
+        <button id="openCategoryMgrBtn" title="Manage categories / จัดการหมวดหมู่" class="px-3 py-2 rounded-card border hover:bg-surface-2 text-xs font-semibold" style="border-color:var(--hairline);">
+          🎨 <span data-i18n="btn_manage_categories">Categories</span>
+        </button>
+        <button id="openAddModalBtn" class="btn-primary px-4 py-2.5 rounded-card text-sm font-semibold">
+          <span data-i18n="btn_new_transaction">+ New Transaction</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Transaction list -->
+    <div class="card perforated overflow-hidden">
+      <div id="txnList" class="divide-y" style="border-color:var(--hairline)"></div>
+      <p id="txnEmpty" class="text-sm text-ink-muted px-5 py-10 text-center hidden" data-i18n="msg_no_transactions">No transactions match these filters.</p>
+    </div>
+  </section>
+
+  <!-- ============================= WALLETS TAB ============================= -->
+  <section id="tab-wallets" class="space-y-4 hidden">
+    <div class="card p-5">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+          <p class="text-xs uppercase tracking-wide text-ink-muted" data-i18n="wallet_system_tag">Wallet System</p>
+          <h2 class="font-display font-semibold text-xl mt-1" data-i18n="wallet_system_title">Your money, separated clearly</h2>
+          <p class="text-xs text-ink-muted mt-1" data-i18n="wallet_system_subtitle">Transfers move assets between wallets and never count as income or expense.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="openDepositBtn" class="btn-primary px-4 py-2.5 rounded-card text-sm font-semibold flex items-center gap-1.5">
+            <span>+</span> <span data-i18n="btn_deposit_money">Deposit Money</span>
+          </button>
+          <button id="openTransferBtn" class="glass-button px-4 py-2.5 rounded-card text-sm font-semibold flex items-center gap-1.5">
+            <span>↔</span> <span data-i18n="btn_transfer_money">Transfer money</span>
+          </button>
+        </div>
+      </div>
+      <div id="walletCards" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      <div class="mt-4 pt-4 border-t flex items-center justify-between" style="border-color:var(--hairline)">
+        <div>
+          <p class="text-xs uppercase tracking-wide text-ink-muted" data-i18n="total_assets">Total Assets</p>
+          <p class="text-xs text-ink-muted mt-1" data-i18n="total_assets_sub">Bank + Savings</p>
+        </div>
+        <p id="walletTotalAssets" class="figure text-2xl font-semibold">฿0.00</p>
+      </div>
+    </div>
+
+    <div class="card p-5">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h2 class="font-display font-semibold text-base" data-i18n="transfer_history">Transfer History</h2>
+          <p class="text-xs text-ink-muted" data-i18n="transfer_history_sub">Moving money between wallets does not change Total Assets.</p>
+        </div>
+      </div>
+      <div id="transferList" class="divide-y" style="border-color:var(--hairline)"></div>
+      <p id="transferEmpty" class="text-sm text-ink-muted py-8 text-center hidden" data-i18n="msg_no_transfers">No transfers yet.</p>
+    </div>
+  </section>
+
+  <!-- ============================= DAILY SUMMARY TAB ============================= -->
+  <section id="tab-daily" class="space-y-4 hidden">
+    <div class="card p-5">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <div>
+          <p class="text-xs uppercase tracking-wide text-ink-muted" data-i18n="daily_overview">Daily overview</p>
+          <h2 id="dailyTitle" class="font-display font-semibold text-xl mt-1">Today's Spending</h2>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button id="dailyPrevBtn" title="Previous day" class="w-8 h-8 flex items-center justify-center rounded-card border hover:bg-surface-2 text-sm" style="border-color:var(--hairline);">◀</button>
+          <input id="dailyDate" type="date" class="px-3 py-1.5 rounded-card text-sm" />
+          <button id="dailyNextBtn" title="Next day" class="w-8 h-8 flex items-center justify-center rounded-card border hover:bg-surface-2 text-sm" style="border-color:var(--hairline);">▶</button>
+          <button id="dailyTodayBtn" title="Jump to today" class="px-2.5 py-1.5 rounded-card border hover:bg-surface-2 text-xs font-medium" style="border-color:var(--hairline);" data-i18n="btn_today">Today</button>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="card p-4">
+          <p class="text-xs text-ink-muted" data-i18n="income">Income</p>
+          <p id="dailyIncome" class="figure text-xl font-semibold mt-1" style="color:var(--income)">฿0.00</p>
+        </div>
+        <div class="card p-4">
+          <p class="text-xs text-ink-muted" data-i18n="expense">Expense</p>
+          <p id="dailyExpense" class="figure text-xl font-semibold mt-1" style="color:var(--expense)">฿0.00</p>
+        </div>
+        <div class="card p-4">
+          <p class="text-xs text-ink-muted" data-i18n="net">Net</p>
+          <p id="dailyNet" class="figure text-xl font-semibold mt-1">฿0.00</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="card p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-display font-semibold text-base" data-i18n="spending_by_category">Spending by Category</h2>
+          <span id="dailyTxnCount" class="text-xs text-ink-muted">0 transactions</span>
+        </div>
+        <div id="dailyCategoryList" class="space-y-2"></div>
+        <p id="dailyCategoryEmpty" class="text-sm text-ink-muted py-5 hidden" data-i18n="msg_no_daily_spending">No spending recorded for this day.</p>
+      </div>
+
+      <div class="card p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-display font-semibold text-base" data-i18n="todays_activity">Today's Activity</h2>
+          <button data-goto="transactions" class="text-xs text-ink-muted hover:underline" data-i18n="btn_manage">Manage →</button>
+        </div>
+        <div id="dailyTxnList" class="divide-y" style="border-color:var(--hairline)"></div>
+        <p id="dailyTxnEmpty" class="text-sm text-ink-muted py-5 hidden" data-i18n="msg_no_daily_txns">No transactions for this day.</p>
+      </div>
+    </div>
+
+    <div class="card p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-display font-semibold text-base" data-i18n="last_7_days">Last 7 Days</h2>
+        <span class="text-xs text-ink-muted" data-i18n="daily_expenses_sub">Daily expenses</span>
+      </div>
+      <div id="dailyWeekList" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2"></div>
+    </div>
+  </section>
+
+  <!-- ============================= ANALYTICS TAB ============================= -->
+  <section id="tab-analytics" class="space-y-4 hidden">
+    <div class="card p-5">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <h2 class="font-display font-semibold text-base" data-i18n="analytics_title">Expense Breakdown by Category</h2>
+        <input id="analyticsMonth" type="month" class="px-3 py-2 rounded-md text-sm" />
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-6 items-center">
+        <div class="md:col-span-3 relative" style="height:300px;">
+          <canvas id="categoryPie"></canvas>
+        </div>
+        <div id="categoryLegend" class="md:col-span-2 space-y-2"></div>
+      </div>
+      <p id="analyticsEmpty" class="text-sm text-ink-muted text-center py-6 hidden" data-i18n="msg_no_analytics">No expenses recorded for this month yet.</p>
+    </div>
+  </section>
+
+  <!-- ============================= EMERGENCY FUND TAB ============================= -->
+  <section id="tab-emergency" class="space-y-4 hidden">
+    <div class="card p-5">
+      <h2 class="font-display font-semibold text-base" data-i18n="emergency_title">Emergency Fund Calculator</h2>
+      <p class="text-sm text-ink-muted mt-1" data-i18n="emergency_subtitle">Estimates a safety net based on your average monthly expenses to date.</p>
+
+      <div class="grid sm:grid-cols-2 gap-5 mt-5">
+        <div>
+          <label class="text-xs text-ink-muted block mb-1"><span data-i18n="coverage_window">Coverage window:</span> <span id="monthsRangeLabel" class="figure">6 months</span></label>
+          <input id="monthsRange" type="range" min="3" max="6" step="1" value="6" class="w-full accent-[var(--gold)]" />
+          <div class="flex justify-between text-[11px] text-ink-muted mt-1"><span data-i18n="mo_3_lean">3 mo (lean)</span><span data-i18n="mo_6_comf">6 mo (comfortable)</span></div>
+        </div>
+        <div>
+          <label class="text-xs text-ink-muted block mb-1" data-i18n="current_savings_label">Current savings set aside (optional)</label>
+          <input id="currentSavings" type="number" min="0" step="1" placeholder="0.00" class="figure w-full px-3 py-2 rounded-md text-sm" />
+        </div>
+      </div>
+
+      <div class="grid sm:grid-cols-3 gap-4 mt-6">
+        <div class="card ruled p-4">
+          <p class="text-xs text-ink-muted" data-i18n="avg_monthly_expense">Avg. monthly expense</p>
+          <p id="avgMonthlyExpense" class="figure text-xl font-semibold mt-1">฿0.00</p>
+        </div>
+        <div class="card ruled p-4">
+          <p class="text-xs text-ink-muted" data-i18n="target_fund">Target emergency fund</p>
+          <p id="targetFund" class="figure text-xl font-semibold mt-1" style="color:var(--gold)">฿0.00</p>
+        </div>
+        <div class="card ruled p-4">
+          <p class="text-xs text-ink-muted" data-i18n="still_needed">Still needed</p>
+          <p id="fundGap" class="figure text-xl font-semibold mt-1">฿0.00</p>
+        </div>
+      </div>
+
+      <div class="mt-5">
+        <div class="w-full h-3 rounded-full overflow-hidden" style="background:var(--surface-2)">
+          <div id="fundProgressBar" class="h-full rounded-full" style="width:0%; background:var(--income); transition:width .3s ease;"></div>
+        </div>
+        <p id="fundProgressLabel" class="text-xs text-ink-muted mt-2">0% funded</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============================= ADD/EDIT MODAL ============================= -->
+<div id="modalBackdrop" class="modal-backdrop fixed inset-0 z-40 hidden items-center justify-center p-4">
+  <div class="modal-panel card w-full max-w-md p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h3 id="modalTitle" class="font-display font-semibold text-lg" data-i18n="modal_new_transaction">New Transaction</h3>
+      <button id="closeModalBtn" class="text-ink-muted hover:text-ink text-xl leading-none">&times;</button>
+    </div>
+
+    <form id="txnForm" class="space-y-3">
+      <input type="hidden" id="txnId" />
+
+      <!-- Type toggle -->
+      <div class="grid grid-cols-2 gap-2">
+        <button type="button" data-type="expense" class="type-btn px-3 py-2 rounded-card text-sm font-medium border" style="border-color:var(--expense); color:var(--expense);" data-i18n="type_expense">Expense</button>
+        <button type="button" data-type="income" class="type-btn px-3 py-2 rounded-card text-sm font-medium border" style="border-color:var(--hairline); color:var(--ink-muted);" data-i18n="type_income">Income</button>
+      </div>
+
+      <div>
+        <label class="text-xs text-ink-muted block mb-1" data-i18n="form_title">Title</label>
+        <input id="txnTitle" required type="text" placeholder="e.g. Lunch with team" class="w-full px-3 py-2 rounded-md text-sm" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-ink-muted block mb-1" data-i18n="form_amount">Amount (฿)</label>
+          <input id="txnAmount" required type="number" min="0.01" step="0.01" placeholder="0.00" class="figure w-full px-3 py-2 rounded-md text-sm" />
+        </div>
+        <div>
+          <label class="text-xs text-ink-muted block mb-1" data-i18n="form_date">Date</label>
+          <input id="txnDate" required type="date" class="w-full px-3 py-2 rounded-md text-sm" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-ink-muted block mb-1" data-i18n="form_category">Category</label>
+          <select id="txnCategory" class="w-full px-3 py-2 rounded-md text-sm"></select>
+        </div>
+        <div>
+          <label class="text-xs text-ink-muted block mb-1" data-i18n="form_wallet">Wallet</label>
+          <select id="txnWallet" class="w-full px-3 py-2 rounded-md text-sm"></select>
+        </div>
+      </div>
+
+      <div>
+        <label class="text-xs text-ink-muted block mb-1" data-i18n="form_notes">Notes (optional)</label>
+        <textarea id="txnNotes" rows="2" placeholder="Any extra detail…" class="w-full px-3 py-2 rounded-md text-sm resize-none"></textarea>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button type="submit" class="btn-primary flex-1 px-4 py-2.5 rounded-card text-sm font-semibold" data-i18n="btn_save_transaction">Save Transaction</button>
+        <button type="button" id="deleteTxnBtn" class="hidden px-4 py-2.5 rounded-card text-sm font-medium" style="color:var(--expense); border:1px solid var(--expense);" data-i18n="btn_delete">Delete</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================= DEPOSIT MODAL ============================= -->
+<div id="depositBackdrop" class="modal-backdrop fixed inset-0 z-40 hidden items-center justify-center p-4">
+  <div class="modal-panel card w-full max-w-md p-5">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <p class="text-xs uppercase tracking-wide text-ink-muted" data-i18n="deposit_tag">Wallet Deposit</p>
+        <h3 class="font-display font-semibold text-lg mt-1" data-i18n="deposit_title">Deposit Money into Wallet</h3>
+      </div>
+      <button id="closeDepositBtn" class="text-ink-muted hover:text-ink text-xl leading-none">&times;</button>
+    </div>
+    <form id="depositForm" class="space-y-3">
+      <div>
+        <label class="text-xs text-ink-muted block mb-1" data-i18n="deposit_into_wallet">Deposit into Wallet</label>
+        <select id="depositWallet" class="w-full px-3 py-2 rounded-md text-sm"></select>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-ink-muted block mb-1" data-i18n="form_amount">Amount (฿)</label>
+          <input id="depositAmount" required type="number" min="0.01" step="0.01" placeholder="0.00" class="figure w-full px-3 py-2 rounded-md text-sm" />
+        </div>
+        <div>
+          <label class="text-xs text-ink-muted block mb-1" data-i18n="form_date">Date</label>
+          <input id="depositDate" required type="date" class="w-full px-3 py-2 rounded-md text-sm" />
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1" data-i18n="deposit_source_title">Title / Source</label>
+        <input id="depositTitle" required type="text" placeholder="e.g. Cash deposit, Salary" class="w-full px-3 py-2 rounded-md text-sm" />
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1" data-i18n="form_category">Category</label>
+        <select id="depositCategory" class="w-full px-3 py-2 rounded-md text-sm"></select>
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1" data-i18n="form_notes">Note (optional)</label>
+        <input id="depositNote" type="text" placeholder="e.g. ATM deposit" class="w-full px-3 py-2 rounded-md text-sm" />
+      </div>
+      <button type="submit" class="btn-primary w-full px-4 py-2.5 rounded-card text-sm font-semibold" data-i18n="btn_confirm_deposit">Confirm Deposit</button>
+    </form>
+  </div>
+</div>
+
+<!-- ============================= ADJUST OPENING BALANCE MODAL ============================= -->
+<div id="openingBalanceBackdrop" class="modal-backdrop fixed inset-0 z-40 hidden items-center justify-center p-4">
+  <div class="modal-panel card w-full max-w-md p-5">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <p class="text-xs uppercase tracking-wide text-ink-muted" data-i18n="wallet_settings">Wallet Settings</p>
+        <h3 class="font-display font-semibold text-lg mt-1" data-i18n="set_opening_balance">Set Starting Balance</h3>
+      </div>
+      <button id="closeOpeningBalanceBtn" class="text-ink-muted hover:text-ink text-xl leading-none">&times;</button>
+    </div>
+    <form id="openingBalanceForm" class="space-y-3">
+      <input type="hidden" id="openingWalletId" />
+      <div>
+        <label class="text-xs text-ink-muted block mb-1" data-i18n="selected_wallet">Wallet</label>
+        <p id="openingWalletName" class="font-semibold text-sm py-1.5 px-3 rounded-md border" style="border-color:var(--hairline); background:var(--surface-2);"></p>
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1" data-i18n="opening_balance_amount">Initial / Starting Balance (฿)</label>
+        <input id="openingBalanceInput" required type="number" min="0" step="0.01" placeholder="0.00" class="figure w-full px-3 py-2 rounded-md text-sm" />
+        <p class="text-[11px] text-ink-muted mt-1" data-i18n="opening_balance_desc">Initial money in this wallet before tracking transactions.</p>
+      </div>
+      <button type="submit" class="btn-primary w-full px-4 py-2.5 rounded-card text-sm font-semibold" data-i18n="btn_save_changes">Save Starting Balance</button>
+    </form>
+  </div>
+</div>
+
+<!-- ============================= CATEGORY MANAGER MODAL ============================= -->
+<div id="categoryBackdrop" class="modal-backdrop fixed inset-0 z-40 hidden items-center justify-center p-4">
+  <div class="modal-panel card w-full max-w-md p-5 space-y-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-xs uppercase tracking-wide text-ink-muted" data-i18n="categories_tag">Personalization</p>
+        <h3 class="font-display font-semibold text-lg mt-1" data-i18n="manage_categories_title">Manage Categories</h3>
+      </div>
+      <button id="closeCategoryBtn" class="text-ink-muted hover:text-ink text-xl leading-none">&times;</button>
+    </div>
+
+    <!-- Category list -->
+    <div class="space-y-2 max-h-56 overflow-y-auto pr-1" id="categoryListContainer"></div>
+
+    <!-- Add new category -->
+    <form id="addCategoryForm" class="p-3.5 rounded-card border space-y-3" style="border-color:var(--hairline); background:var(--surface-2);">
+      <p class="text-xs font-semibold uppercase tracking-wide text-ink-muted" data-i18n="add_new_category">Add New Category</p>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1" data-i18n="category_name">Category Name</label>
+        <input id="newCatName" required type="text" placeholder="e.g. Salary, Online Shopping" class="w-full px-3 py-2 rounded-md text-sm" />
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1" data-i18n="category_color">Color</label>
+        <div class="flex items-center gap-2">
+          <input id="newCatColor" type="color" value="#10B981" class="w-10 h-8 rounded border p-0.5 cursor-pointer" style="border-color:var(--hairline);" />
+          <div class="flex flex-wrap gap-1.5 flex-1" id="colorPresets"></div>
+        </div>
+      </div>
+      <button type="submit" class="btn-primary w-full px-3 py-2 rounded-card text-xs font-semibold" data-i18n="btn_add_category">+ Add Category</button>
+    </form>
+  </div>
+</div>
+
+<!-- ============================= TRANSFER MODAL ============================= -->
+<div id="transferBackdrop" class="modal-backdrop fixed inset-0 z-40 hidden items-center justify-center p-4">
+  <div class="modal-panel card w-full max-w-md p-5">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <p class="text-xs uppercase tracking-wide text-ink-muted" data-i18n="transfer_tag">Asset transfer</p>
+        <h3 class="font-display font-semibold text-lg mt-1" data-i18n="transfer_title">Transfer between wallets</h3>
+      </div>
+      <button id="closeTransferBtn" class="text-ink-muted hover:text-ink text-xl leading-none">&times;</button>
+    </div>
+    <form id="transferForm" class="space-y-3">
+      <div>
+        <label class="text-xs text-ink-muted block mb-1" data-i18n="transfer_from">From</label>
+        <select id="transferFrom" class="w-full px-3 py-2 rounded-md text-sm"></select>
+      </div>
+      <div class="flex justify-center -my-1">
+        <span class="w-8 h-8 rounded-full flex items-center justify-center" style="background:rgba(98,233,255,.12);color:var(--cyan)">↓</span>
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1" data-i18n="transfer_to">To</label>
+        <select id="transferTo" class="w-full px-3 py-2 rounded-md text-sm"></select>
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1" data-i18n="form_amount">Amount (฿)</label>
+        <input id="transferAmount" required type="number" min="0.01" step="0.01" placeholder="0.00" class="figure w-full px-3 py-2 rounded-md text-sm" />
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1" data-i18n="form_date">Date</label>
+        <input id="transferDate" required type="date" class="w-full px-3 py-2 rounded-md text-sm" />
+      </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1" data-i18n="form_notes">Note (optional)</label>
+        <input id="transferNote" type="text" placeholder="e.g. Monthly savings" class="w-full px-3 py-2 rounded-md text-sm" />
+      </div>
+      <button type="submit" class="btn-primary w-full px-4 py-2.5 rounded-card text-sm font-semibold" data-i18n="btn_confirm_transfer">Confirm Transfer</button>
+    </form>
+  </div>
+</div>
+
+<!-- ============================= BACKUP / RESTORE MODAL ============================= -->
+<div id="backupBackdrop" class="modal-backdrop fixed inset-0 z-40 hidden items-center justify-center p-4">
+  <div class="modal-panel card w-full max-w-md p-5 space-y-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-xs uppercase tracking-wide text-ink-muted" data-i18n="backup_tag">Data Management</p>
+        <h3 class="font-display font-semibold text-lg mt-1" data-i18n="backup_title">Backup & Restore</h3>
+      </div>
+      <button id="closeBackupBtn" class="text-ink-muted hover:text-ink text-xl leading-none">&times;</button>
+    </div>
+    
+    <div class="p-4 rounded-card border space-y-2" style="border-color:var(--hairline); background:var(--surface-2);">
+      <p class="text-sm font-semibold" data-i18n="export_backup_title">Export JSON Backup</p>
+      <p class="text-xs text-ink-muted" data-i18n="export_backup_desc">Download a complete JSON snapshot of transactions, transfers, wallets, and budget settings.</p>
+      <button id="downloadBackupBtn" class="btn-primary px-3 py-2 rounded-card text-xs font-semibold mt-2" data-i18n="btn_download_backup">Download JSON Backup</button>
+    </div>
+
+    <div class="p-4 rounded-card border space-y-2" style="border-color:var(--hairline); background:var(--surface-2);">
+      <p class="text-sm font-semibold" data-i18n="restore_data_title">Restore Data</p>
+      <p class="text-xs text-ink-muted" data-i18n="restore_data_desc">Upload a previously saved JSON backup file to restore your data.</p>
+      <input type="file" id="restoreFileInput" accept=".json" class="block w-full text-xs text-ink-muted file:mr-2 file:py-1.5 file:px-3 file:rounded-card file:border-0 file:text-xs file:font-semibold file:bg-surface file:text-ink hover:file:bg-surface-2 cursor-pointer mt-1" />
+    </div>
+
+    <div class="p-4 rounded-card border space-y-2 border-dashed" style="border-color:var(--expense); background:color-mix(in srgb, var(--expense) 8%, transparent);">
+      <p class="text-sm font-semibold" style="color:var(--expense)" data-i18n="clear_data_title">Clear All Data</p>
+      <p class="text-xs text-ink-muted" data-i18n="clear_data_desc">Wipe all transactions, transfers, and reset wallet balances and budget to 0.</p>
+      <button id="resetDataBtn" class="px-3 py-2 rounded-card text-xs font-semibold" style="color:var(--expense); border:1px solid var(--expense);" data-i18n="btn_reset_all">Reset Everything to 0</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-card text-sm font-medium opacity-0 pointer-events-none z-50"></div>
+
+<script>
+/* ---------------------- I18N (INTERNATIONALIZATION) ---------------------- */
+const I18N = {
+  en: {
+    app_tagline: "Personal finance, kept honestly",
+    nav_backup: "Backup",
+    nav_export_csv: "Export CSV",
+    tab_dashboard: "Dashboard",
+    tab_transactions: "Transactions",
+    tab_wallets: "Wallets",
+    tab_daily: "Daily Summary",
+    tab_analytics: "Analytics",
+    tab_emergency: "Emergency Fund",
+    
+    // Dashboard
+    total_income: "Total Income",
+    total_expense: "Total Expense",
+    current_balance: "Current Balance",
+    wallets_title: "Wallets",
+    wallets_subtitle: "Where your money lives",
+    btn_manage: "Manage →",
+    total_assets: "Total Assets",
+    total_assets_sub: "Bank + Savings",
+    monthly_budget: "Monthly Budget",
+    budget_limit: "Limit",
+    budget_empty_status: "Set a monthly budget to track spending.",
+    budget_alert_warn: "⚠ You've crossed 80% of your monthly budget.",
+    budget_alert_exceed: "⚠ You've exceeded your monthly budget by",
+    recent_activity: "Recent Activity",
+    btn_view_all: "View all →",
+    recent_empty: "No transactions yet. Add your first one from the Transactions tab.",
+    
+    // Transactions
+    quick_add: "Quick Add",
+    btn_add: "Add",
+    filter_search: "Search",
+    filter_month: "Month",
+    filter_type: "Type",
+    type_all: "All",
+    type_income: "Income",
+    type_expense: "Expense",
+    filter_category: "Category",
+    filter_wallet: "Wallet",
+    clear_filters: "Clear filters",
+    btn_manage_categories: "Categories",
+    btn_new_transaction: "+ New Transaction",
+    msg_no_transactions: "No transactions match these filters.",
+    all_categories: "All categories",
+    all_wallets: "All wallets",
+
+    // Wallets
+    wallet_system_tag: "Wallet System",
+    wallet_system_title: "Your money, separated clearly",
+    wallet_system_subtitle: "Transfers move assets between wallets and never count as income or expense.",
+    btn_deposit_money: "Deposit Money",
+    btn_transfer_money: "Transfer money",
+    transfer_history: "Transfer History",
+    transfer_history_sub: "Moving money between wallets does not change Total Assets.",
+    msg_no_transfers: "No transfers yet.",
+    opening_label: "Opening",
+    transfer_in_label: "Transfer in",
+    transfer_out_label: "Transfer out",
+    btn_deposit: "+ Deposit",
+    btn_transfer: "↔ Transfer",
+    btn_set_opening: "⚙ Opening Balance",
+    txns_count: "txns",
+    bank_wallet_type: "Bank Account Wallet",
+    savings_wallet_type: "Savings Wallet",
+    bank_wallet_desc: "Main spending wallet",
+    savings_wallet_desc: "Kept separate from everyday spending",
+
+    // Daily Summary
+    daily_overview: "Daily overview",
+    daily_spending: "Today's Spending",
+    btn_today: "Today",
+    income: "Income",
+    expense: "Expense",
+    net: "Net",
+    spending_by_category: "Spending by Category",
+    todays_activity: "Today's Activity",
+    last_7_days: "Last 7 Days",
+    daily_expenses_sub: "Daily expenses",
+    msg_no_daily_spending: "No spending recorded for this day.",
+    msg_no_daily_txns: "No transactions for this day.",
+
+    // Analytics
+    analytics_title: "Expense Breakdown by Category",
+    msg_no_analytics: "No expenses recorded for this month yet.",
+
+    // Emergency Fund
+    emergency_title: "Emergency Fund Calculator",
+    emergency_subtitle: "Estimates a safety net based on your average monthly expenses to date.",
+    coverage_window: "Coverage window:",
+    mo_3_lean: "3 mo (lean)",
+    mo_6_comf: "6 mo (comfortable)",
+    current_savings_label: "Current savings set aside (optional)",
+    avg_monthly_expense: "Avg. monthly expense",
+    target_fund: "Target emergency fund",
+    still_needed: "Still needed",
+    funded_label: "funded",
+
+    // Modals
+    modal_new_transaction: "New Transaction",
+    modal_edit_transaction: "Edit Transaction",
+    form_title: "Title",
+    form_amount: "Amount (฿)",
+    form_date: "Date",
+    form_category: "Category",
+    form_wallet: "Wallet",
+    form_notes: "Notes (optional)",
+    btn_save_transaction: "Save Transaction",
+    btn_delete: "Delete",
+    
+    // Deposit Modal
+    deposit_tag: "Wallet Deposit",
+    deposit_title: "Deposit Money into Wallet",
+    deposit_into_wallet: "Deposit into Wallet",
+    deposit_source_title: "Title / Source",
+    btn_confirm_deposit: "Confirm Deposit",
+
+    // Opening Balance Modal
+    wallet_settings: "Wallet Settings",
+    set_opening_balance: "Set Starting Balance",
+    selected_wallet: "Wallet",
+    opening_balance_amount: "Initial / Starting Balance (฿)",
+    opening_balance_desc: "Initial money in this wallet before tracking transactions.",
+    btn_save_changes: "Save Starting Balance",
+
+    // Category Manager Modal
+    categories_tag: "Personalization",
+    manage_categories_title: "Manage Categories",
+    add_new_category: "Add New Category",
+    category_name: "Category Name",
+    category_color: "Color",
+    btn_add_category: "+ Add Category",
+
+    // Transfer Modal
+    transfer_tag: "Asset transfer",
+    transfer_title: "Transfer between wallets",
+    transfer_from: "From",
+    transfer_to: "To",
+    btn_confirm_transfer: "Confirm Transfer",
+
+    // Backup Modal
+    backup_tag: "Data Management",
+    backup_title: "Backup & Restore",
+    export_backup_title: "Export JSON Backup",
+    export_backup_desc: "Download a complete JSON snapshot of transactions, transfers, wallets, and budget settings.",
+    btn_download_backup: "Download JSON Backup",
+    restore_data_title: "Restore Data",
+    restore_data_desc: "Upload a previously saved JSON backup file to restore your data.",
+    clear_data_title: "Clear All Data",
+    clear_data_desc: "Wipe all transactions, transfers, and reset wallet balances and budget to 0.",
+    btn_reset_all: "Reset Everything to 0",
+
+    // Toasts & Prompts
+    toast_backup_downloaded: "Backup downloaded",
+    toast_data_restored: "Data successfully restored!",
+    toast_all_reset: "All data reset to 0",
+    toast_deposit_added: "Deposit added successfully",
+    toast_opening_saved: "Starting balance updated",
+    toast_transfer_completed: "Transfer completed",
+    toast_transfer_deleted: "Transfer deleted",
+    toast_category_added: "Category added",
+    toast_category_deleted: "Category deleted",
+    toast_cannot_delete_default_cat: "Cannot delete default category",
+    toast_txn_saved: "Transaction saved",
+    toast_txn_deleted: "Transaction deleted",
+    toast_csv_exported: "CSV exported",
+    prompt_delete_txn: "Delete this transaction? This cannot be undone.",
+    prompt_delete_transfer: "Delete this transfer? Wallet balances will be recalculated.",
+    prompt_reset_all: "Clear all transactions and reset all wallet balances & budget to 0?",
+    prompt_restore: "Restore data from this file? This will merge/replace existing data."
+  },
+  th: {
+    app_tagline: "บันทึกรายรับรายจ่ายอย่างตรงไปตรงมา",
+    nav_backup: "สำรองข้อมูล",
+    nav_export_csv: "ส่งออก CSV",
+    tab_dashboard: "แดชบอร์ด",
+    tab_transactions: "รายการธุรกรรม",
+    tab_wallets: "กระเป๋าเงิน",
+    tab_daily: "สรุปรายวัน",
+    tab_analytics: "วิเคราะห์ข้อมูล",
+    tab_emergency: "เงินสำรองฉุกเฉิน",
+    
+    // Dashboard
+    total_income: "รายรับรวม",
+    total_expense: "รายจ่ายรวม",
+    current_balance: "ยอดคงเหลือสุทธิ",
+    wallets_title: "กระเป๋าเงิน",
+    wallets_subtitle: "แหล่งเก็บเงินของคุณ",
+    btn_manage: "จัดการ →",
+    total_assets: "สินทรัพย์รวม",
+    total_assets_sub: "ธนาคาร + เงินออม",
+    monthly_budget: "งบประมาณรายเดือน",
+    budget_limit: "วงเงิน",
+    budget_empty_status: "ตั้งค่างบประมาณรายเดือนเพื่อติดตามการใช้จ่าย",
+    budget_alert_warn: "⚠ คุณใช้จ่ายเกิน 80% ของงบประมาณรายเดือนแล้ว",
+    budget_alert_exceed: "⚠ คุณใช้จ่ายเกินงบประมาณรายเดือนไปแล้ว",
+    recent_activity: "รายการล่าสุด",
+    btn_view_all: "ดูทั้งหมด →",
+    recent_empty: "ยังไม่มีรายการธุรกรรม เพิ่มรายการแรกได้ที่แท็บรายการธุรกรรม",
+    
+    // Transactions
+    quick_add: "บันทึกด่วน (Quick Add)",
+    btn_add: "เพิ่ม",
+    filter_search: "ค้นหา",
+    filter_month: "เดือน",
+    filter_type: "ประเภท",
+    type_all: "ทั้งหมด",
+    type_income: "รายรับ",
+    type_expense: "รายจ่าย",
+    filter_category: "หมวดหมู่",
+    filter_wallet: "กระเป๋าเงิน",
+    clear_filters: "ล้างตัวกรอง",
+    btn_manage_categories: "จัดการหมวดหมู่",
+    btn_new_transaction: "+ บันทึกรายการใหม่",
+    msg_no_transactions: "ไม่มีรายการที่ตรงกับตัวกรองนี้",
+    all_categories: "ทุกหมวดหมู่",
+    all_wallets: "ทุกกระเป๋าเงิน",
+
+    // Wallets
+    wallet_system_tag: "ระบบกระเป๋าเงิน",
+    wallet_system_title: "จัดการเงินของคุณอย่างเป็นสัดส่วน",
+    wallet_system_subtitle: "การโอนเงินระหว่างกระเป๋าเป็นการย้ายสินทรัพย์ ไม่นับเป็นรายรับหรือรายจ่าย",
+    btn_deposit_money: "ฝากเงินเข้ากระเป๋า",
+    btn_transfer_money: "โอนเงินระหว่างกระเป๋า",
+    transfer_history: "ประวัติการโอนเงิน",
+    transfer_history_sub: "การย้ายเงินระหว่างกระเป๋าไม่ทำให้สินทรัพย์รวมเปลี่ยนแปลง",
+    msg_no_transfers: "ยังไม่มีประวัติการโอนเงิน",
+    opening_label: "เงินตั้งต้น",
+    transfer_in_label: "โอนเข้า",
+    transfer_out_label: "โอนออก",
+    btn_deposit: "+ ฝากเงิน",
+    btn_transfer: "↔ โอนเงิน",
+    btn_set_opening: "⚙ ยอดเริ่มต้น",
+    txns_count: "รายการ",
+    bank_wallet_type: "กระเป๋าเงินหลัก (Bank)",
+    savings_wallet_type: "กระเป๋าเงินออม (Savings)",
+    bank_wallet_desc: "สำหรับใช้จ่ายในชีวิตประจำวัน",
+    savings_wallet_desc: "เก็บแยกไว้ไม่นำมาปนกับค่าใช้จ่ายประจำวัน",
+
+    // Daily Summary
+    daily_overview: "ภาพรวมรายวัน",
+    daily_spending: "การใช้จ่ายประจำวัน",
+    btn_today: "วันนี้",
+    income: "รายรับ",
+    expense: "รายจ่าย",
+    net: "คงเหลือสุทธิ",
+    spending_by_category: "การใช้จ่ายตามหมวดหมู่",
+    todays_activity: "กิจกรรมวันนี้",
+    last_7_days: "7 วันล่าสุด",
+    daily_expenses_sub: "รายจ่ายรายวัน",
+    msg_no_daily_spending: "ไม่มีรายจ่ายในวันนี้",
+    msg_no_daily_txns: "ไม่มีรายการธุรกรรมในวันนี้",
+
+    // Analytics
+    analytics_title: "สัดส่วนรายจ่ายตามหมวดหมู่",
+    msg_no_analytics: "ยังไม่มีรายจ่ายบันทึกไว้ในเดือนนี้",
+
+    // Emergency Fund
+    emergency_title: "คำนวณเงินสำรองฉุกเฉิน",
+    emergency_subtitle: "ประเมินเงินสำรองที่ปลอดภัยตามค่าใช้จ่ายเฉลี่ยต่อเดือนของคุณ",
+    coverage_window: "ระยะเวลาที่ครอบคลุม:",
+    mo_3_lean: "3 เดือน (ขั้นต่ำ)",
+    mo_6_comf: "6 เดือน (อุ่นใจ)",
+    current_savings_label: "เงินออมสำรองที่มีอยู่แล้ว (ไม่บังคับ)",
+    avg_monthly_expense: "ค่าใช้จ่ายเฉลี่ยต่อเดือน",
+    target_fund: "เป้าหมายเงินสำรอง",
+    still_needed: "ยังต้องเก็บเพิ่มอีก",
+    funded_label: "ของเป้าหมาย",
+
+    // Modals
+    modal_new_transaction: "บันทึกรายการใหม่",
+    modal_edit_transaction: "แก้ไขรายการธุรกรรม",
+    form_title: "ชื่อรายการ",
+    form_amount: "จำนวนเงิน (฿)",
+    form_date: "วันที่",
+    form_category: "หมวดหมู่",
+    form_wallet: "กระเป๋าเงิน",
+    form_notes: "บันทึกเพิ่มเติม (ไม่บังคับ)",
+    btn_save_transaction: "บันทึกรายการ",
+    btn_delete: "ลบรายการ",
+    
+    // Deposit Modal
+    deposit_tag: "ฝากเงินเข้ากระเป๋า",
+    deposit_title: "ฝากเงิน / เติมเงินเข้ากระเป๋า",
+    deposit_into_wallet: "เลือกกระเป๋าเงินปลายทาง",
+    deposit_source_title: "ที่มาของเงิน / ชื่อรายการ",
+    btn_confirm_deposit: "ยืนยันการฝากเงิน",
+
+    // Opening Balance Modal
+    wallet_settings: "ตั้งค่ากระเป๋าเงิน",
+    set_opening_balance: "กำหนดยอดเงินยกมาเริ่มต้น",
+    selected_wallet: "กระเป๋าเงิน",
+    opening_balance_amount: "ยอดเงินเริ่มต้น (Opening Balance ฿)",
+    opening_balance_desc: "ยอดเงินที่มีอยู่เดิมในกระเป๋าใบนี้ก่อนเริ่มบันทึกธุรกรรม",
+    btn_save_changes: "บันทึกยอดเงินเริ่มต้น",
+
+    // Category Manager Modal
+    categories_tag: "ปรับแต่งระบบ",
+    manage_categories_title: "จัดการหมวดหมู่",
+    add_new_category: "เพิ่มหมวดหมู่ใหม่",
+    category_name: "ชื่อหมวดหมู่",
+    category_color: "สีหมวดหมู่",
+    btn_add_category: "+ เพิ่มหมวดหมู่",
+
+    // Transfer Modal
+    transfer_tag: "ย้ายเงินระหว่างกระเป๋า",
+    transfer_title: "โอนเงินระหว่างกระเป๋า",
+    transfer_from: "จากกระเป๋า",
+    transfer_to: "ไปยังกระเป๋า",
+    btn_confirm_transfer: "ยืนยันการโอนเงิน",
+
+    // Backup Modal
+    backup_tag: "จัดการข้อมูล",
+    backup_title: "สำรองและกู้คืนข้อมูล",
+    export_backup_title: "ส่งออกไฟล์สำรอง (JSON Backup)",
+    export_backup_desc: "ดาวน์โหลดข้อมูลธุรกรรม การโอนเงิน กระเป๋าเงิน และงบประมาณเป็นไฟล์ JSON",
+    btn_download_backup: "ดาวน์โหลดไฟล์สำรอง",
+    restore_data_title: "กู้คืนข้อมูล (Restore)",
+    restore_data_desc: "เลือกไฟล์ JSON สำรองที่เคยดาวน์โหลดไว้เพื่อนำข้อมูลกลับมา",
+    clear_data_title: "ล้างข้อมูลทั้งหมด",
+    clear_data_desc: "ลบรายการธุรกรรม การโอนเงินทั้งหมด และรีเซ็ตยอดกระเป๋ากลับเป็น 0",
+    btn_reset_all: "รีเซ็ตทุกอย่างเป็น 0",
+
+    // Toasts & Prompts
+    toast_backup_downloaded: "ดาวน์โหลดไฟล์สำรองเรียบร้อย",
+    toast_data_restored: "กู้คืนข้อมูลสำเร็จเรียบร้อย!",
+    toast_all_reset: "รีเซ็ตข้อมูลทั้งหมดเป็น 0 เรียบร้อย",
+    toast_deposit_added: "ฝากเงินเข้ากระเป๋าสำเร็จ",
+    toast_opening_saved: "บันทึกยอดเงินเริ่มต้นสำเร็จ",
+    toast_transfer_completed: "โอนเงินเรียบร้อยแล้ว",
+    toast_transfer_deleted: "ลบรายการโอนเงินแล้ว",
+    toast_category_added: "เพิ่มหมวดหมู่ใหม่เรียบร้อย",
+    toast_category_deleted: "ลบหมวดหมู่ออกแล้ว",
+    toast_cannot_delete_default_cat: "ไม่สามารถลบหมวดหมู่พื้นฐานได้",
+    toast_txn_saved: "บันทึกรายการสำเร็จ",
+    toast_txn_deleted: "ลบรายการเรียบร้อย",
+    toast_csv_exported: "ส่งออก CSV เรียบร้อย",
+    prompt_delete_txn: "ต้องการลบรายการนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้",
+    prompt_delete_transfer: "ต้องการลบรายการโอนเงินนี้ใช่หรือไม่? ยอดในกระเป๋าจะถูกคำนวณใหม่",
+    prompt_reset_all: "ต้องการล้างรายการทั้งหมดและรีเซ็ตยอดทุกกระเป๋าเป็น 0 ใช่หรือไม่?",
+    prompt_restore: "ต้องการกู้คืนข้อมูลจากไฟล์นี้ใช่หรือไม่? ข้อมูลปัจจุบันจะถูกแทนที่"
+  }
+};
+
+let currentLang = 'th';
+function t(key) {
+  return I18N[currentLang]?.[key] || I18N['en']?.[key] || key;
+}
+
+/* ---------------------- CONSTANTS & KEYS ---------------------- */
+const DEFAULT_CATEGORIES = [
+  { key: 'Food', name_th: 'อาหารและเครื่องดื่ม', color: '#F59E0B' },
+  { key: 'Transport', name_th: 'การเดินทาง', color: '#3B82F6' },
+  { key: 'Bills', name_th: 'บิลและค่าใช้จ่าย', color: '#8B5CF6' },
+  { key: 'Shopping', name_th: 'ช้อปปิ้ง', color: '#EC4899' },
+  { key: 'Entertainment', name_th: 'ความบันเทิง', color: '#14B8A6' },
+  { key: 'Salary', name_th: 'เงินเดือน/รายได้', color: '#10B981' },
+  { key: 'Others', name_th: 'อื่นๆ', color: '#6B7280' },
+];
+
+const PRESET_COLORS = ['#EF4444', '#F97316', '#F59E0B', '#10B981', '#06B6D4', '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899', '#6B7280'];
+
+const LS_KEYS = {
+  transactions: 'ledger_transactions',
+  budget: 'ledger_monthly_budget',
+  theme: 'ledger_theme',
+  wallets: 'ledger_wallets',
+  transfers: 'ledger_transfers',
+  categories: 'ledger_categories',
+  lang: 'ledger_language'
+};
+
+/* ---------------------- STORAGE MODULE ---------------------- */
+const Storage = {
+  getTransactions() {
+    try { return JSON.parse(localStorage.getItem(LS_KEYS.transactions)) || []; }
+    catch { return []; }
+  },
+  saveTransactions(list) {
+    localStorage.setItem(LS_KEYS.transactions, JSON.stringify(list));
+  },
+  getWallets() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(LS_KEYS.wallets));
+      if (Array.isArray(saved) && saved.length) return saved;
+    } catch {}
+    return [
+      { id: 'bank', name: 'Bank Wallet', type: 'bank', openingBalance: 0 },
+      { id: 'savings', name: 'Savings Wallet', type: 'savings', openingBalance: 0 },
+    ];
+  },
+  saveWallets(list) {
+    localStorage.setItem(LS_KEYS.wallets, JSON.stringify(list));
+  },
+  getTransfers() {
+    try { return JSON.parse(localStorage.getItem(LS_KEYS.transfers)) || []; }
+    catch { return []; }
+  },
+  saveTransfers(list) {
+    localStorage.setItem(LS_KEYS.transfers, JSON.stringify(list));
+  },
+  getCategories() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(LS_KEYS.categories));
+      if (Array.isArray(saved) && saved.length) return saved;
+    } catch {}
+    return DEFAULT_CATEGORIES;
+  },
+  saveCategories(list) {
+    localStorage.setItem(LS_KEYS.categories, JSON.stringify(list));
+  },
+  getBudget() {
+    const v = localStorage.getItem(LS_KEYS.budget);
+    return v ? parseFloat(v) : 0;
+  },
+  saveBudget(v) {
+    localStorage.setItem(LS_KEYS.budget, String(v));
+  },
+  getTheme() {
+    return localStorage.getItem(LS_KEYS.theme) || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  },
+  saveTheme(t) {
+    localStorage.setItem(LS_KEYS.theme, t);
+  },
+  getLang() {
+    return localStorage.getItem(LS_KEYS.lang) || 'th';
+  },
+  saveLang(l) {
+    localStorage.setItem(LS_KEYS.lang, l);
+  }
+};
+
+/* ---------------------- STATE ---------------------- */
+let categories = Storage.getCategories();
+let state = {
+  transactions: Storage.getTransactions(),
+  transfers: Storage.getTransfers(),
+  wallets: Storage.getWallets(),
+  budget: Storage.getBudget(),
+  filters: { month: '', type: 'all', category: 'all', wallet: 'all', search: '' },
+  activeTab: 'dashboard',
+};
+
+// Ensure bank & savings exist
+let walletsChangedByMigration = false;
+state.wallets = state.wallets.map(w => ({
+  id: w.id,
+  name: w.name,
+  type: w.type,
+  openingBalance: Number(w.openingBalance) || 0
+}));
+if (!state.wallets.some(w => w.id === 'bank')) {
+  state.wallets.unshift({ id: 'bank', name: 'Bank Wallet', type: 'bank', openingBalance: 0 });
+  walletsChangedByMigration = true;
+}
+if (!state.wallets.some(w => w.id === 'savings')) {
+  state.wallets.push({ id: 'savings', name: 'Savings Wallet', type: 'savings', openingBalance: 0 });
+  walletsChangedByMigration = true;
+}
+state.transactions = state.transactions.map(t => {
+  if (!t.walletId) { walletsChangedByMigration = true; return { ...t, walletId: 'bank' }; }
+  return t;
+});
+if (walletsChangedByMigration) {
+  Storage.saveWallets(state.wallets);
+  Storage.saveTransactions(state.transactions);
+}
+
+/* ---------------------- UTILS ---------------------- */
+const Utils = {
+  uid() { return 't_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); },
+  fmtMoney(n) {
+    const v = Number(n) || 0;
+    return (v < 0 ? '-฿' : '฿') + Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  },
+  monthKey(dateStr) { return dateStr ? dateStr.slice(0, 7) : ''; },
+  todayISO() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  },
+  currentMonthKey() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  },
+  fmtDateHuman(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    const locale = currentLang === 'th' ? 'th-TH' : 'en-US';
+    return d.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
+  },
+  monthLabel(monthKey) {
+    if (!monthKey) return '';
+    const [y, m] = monthKey.split('-');
+    const d = new Date(parseInt(y), parseInt(m) - 1, 1);
+    const locale = currentLang === 'th' ? 'th-TH' : 'en-US';
+    return d.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
+  },
+  parseQuickAdd(text) {
+    const match = text.trim().match(/^(.*?)[\s]+(\d+(\.\d+)?)$/);
+    if (match) {
+      return { title: match[1].trim() || 'Untitled', amount: parseFloat(match[2]) };
+    }
+    const onlyNum = text.trim().match(/^(\d+(\.\d+)?)$/);
+    if (onlyNum) return { title: '', amount: parseFloat(onlyNum[1]) };
+    return { title: text.trim(), amount: '' };
+  },
+  categoryName(key) {
+    const c = categories.find(x => x.key === key);
+    if (!c) return key;
+    return currentLang === 'th' && c.name_th ? c.name_th : c.key;
+  },
+  categoryColor(key) {
+    const c = categories.find(x => x.key === key);
+    return c ? c.color : '#6B7280';
+  },
+  walletName(id) {
+    const w = state.wallets.find(w => w.id === id);
+    if (!w) return 'Bank Wallet';
+    if (currentLang === 'th') {
+      return w.type === 'savings' ? 'กระเป๋าเงินออม (Savings)' : 'กระเป๋าเงินหลัก (Bank)';
+    }
+    return w.name;
+  },
+  walletIcon(id) {
+    const w = state.wallets.find(w => w.id === id);
+    return w && w.type === 'savings' ? '💰' : '🏦';
+  }
+};
+
+/* ---------------------- LANGUAGE SWITCHER ---------------------- */
+function applyLanguage() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    if (I18N[currentLang]?.[key]) {
+      el.textContent = I18N[currentLang][key];
+    }
+  });
+
+  const isTh = currentLang === 'th';
+  document.getElementById('langFlag').textContent = isTh ? '🇹🇭' : '🇬🇧';
+  document.getElementById('langLabel').textContent = isTh ? 'TH' : 'EN';
+  
+  // Placeholders
+  document.getElementById('filterSearch').placeholder = isTh ? 'ค้นหาชื่อรายการ, โน้ต...' : 'Search title, note...';
+  document.getElementById('quickAddInput').placeholder = isTh ? 'ลองพิมพ์ "ข้าวเที่ยง 60" — ชื่อแล้วตามด้วยยอดเงิน' : 'Try "Lunch 60" — title then amount, Enter to open the form';
+  document.getElementById('txnTitle').placeholder = isTh ? 'เช่น ข้าวเที่ยงกับทีม' : 'e.g. Lunch with team';
+  document.getElementById('depositTitle').placeholder = isTh ? 'เช่น เงินเดือน, ฝากเงินสด' : 'e.g. Salary, Cash deposit';
+  document.getElementById('newCatName').placeholder = isTh ? 'เช่น ค่าน้ำมัน, ช้อปปิ้งออนไลน์' : 'e.g. Gas, Online Shopping';
+
+  populateCategorySelects();
+  populateWalletSelects();
+  renderAll();
+}
+
+function setLanguage(lang) {
+  currentLang = lang;
+  Storage.saveLang(lang);
+  applyLanguage();
+}
+
+document.getElementById('langToggle').addEventListener('click', () => {
+  setLanguage(currentLang === 'th' ? 'en' : 'th');
+});
+
+/* ---------------------- TOAST ---------------------- */
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.opacity = '1';
+  el.style.transform = 'translate(-50%, -4px)';
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.transform = 'translate(-50%, 0)';
+  }, 2200);
+}
+
+/* ---------------------- THEME ---------------------- */
+function applyTheme(theme) {
+  document.documentElement.classList.toggle('dark', theme === 'dark');
+  document.getElementById('iconSun').classList.toggle('hidden', theme === 'dark');
+  document.getElementById('iconMoon').classList.toggle('hidden', theme !== 'dark');
+  Storage.saveTheme(theme);
+}
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+  applyTheme(next);
+  renderChart();
+});
+applyTheme(Storage.getTheme());
+
+/* ---------------------- TABS ---------------------- */
+function showTab(name) {
+  state.activeTab = name;
+  ['dashboard', 'transactions', 'wallets', 'daily', 'analytics', 'emergency'].forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('hidden', t !== name);
+  });
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.dataset.active = String(btn.dataset.tab === name);
+  });
+  if (name === 'wallets') renderWallets();
+  if (name === 'daily') renderDailySummary();
+  if (name === 'analytics') renderChart();
+  if (name === 'emergency') renderEmergencyFund();
+}
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => showTab(btn.dataset.tab));
+});
+document.querySelectorAll('[data-goto]').forEach(btn => {
+  btn.addEventListener('click', () => showTab(btn.dataset.goto));
+});
+
+/* ---------------------- CATEGORY & WALLET SELECTS ---------------------- */
+function populateCategorySelects() {
+  const filterSel = document.getElementById('filterCategory');
+  const formSel = document.getElementById('txnCategory');
+  const depositSel = document.getElementById('depositCategory');
+  
+  const currentFilter = filterSel.value || 'all';
+  const currentForm = formSel.value;
+  const currentDeposit = depositSel ? depositSel.value : '';
+
+  filterSel.innerHTML = `<option value="all">${t('all_categories')}</option>`;
+  formSel.innerHTML = '';
+  if (depositSel) depositSel.innerHTML = '';
+
+  categories.forEach(c => {
+    const label = Utils.categoryName(c.key);
+    
+    const opt1 = document.createElement('option'); opt1.value = c.key; opt1.textContent = label;
+    filterSel.appendChild(opt1);
+    
+    const opt2 = document.createElement('option'); opt2.value = c.key; opt2.textContent = label;
+    formSel.appendChild(opt2);
+
+    if (depositSel) {
+      const opt3 = document.createElement('option'); opt3.value = c.key; opt3.textContent = label;
+      depositSel.appendChild(opt3);
+    }
+  });
+
+  if (currentFilter) filterSel.value = currentFilter;
+  if (currentForm && categories.some(c => c.key === currentForm)) formSel.value = currentForm;
+  if (depositSel && currentDeposit && categories.some(c => c.key === currentDeposit)) depositSel.value = currentDeposit;
+}
+
+function populateWalletSelects() {
+  const filter = document.getElementById('filterWallet');
+  const txn = document.getElementById('txnWallet');
+  const from = document.getElementById('transferFrom');
+  const to = document.getElementById('transferTo');
+  const deposit = document.getElementById('depositWallet');
+
+  const currentFilter = filter.value || 'all';
+  filter.innerHTML = `<option value="all">${t('all_wallets')}</option>`;
+  [txn, from, to, deposit].forEach(sel => { if (sel) sel.innerHTML = ''; });
+
+  state.wallets.forEach(w => {
+    const icon = w.type === 'savings' ? '💰' : '🏦';
+    const label = `${icon} ${Utils.walletName(w.id)}`;
+    
+    const add = (sel, val = w.id) => {
+      if (!sel) return;
+      const o = document.createElement('option');
+      o.value = val;
+      o.textContent = label;
+      sel.appendChild(o);
+    };
+
+    add(filter);
+    add(txn);
+    add(from);
+    add(to);
+    add(deposit);
+  });
+
+  if (currentFilter) filter.value = currentFilter;
+}
+
+/* ---------------------- COMPUTATIONS ---------------------- */
+function computeTotals(list) {
+  let income = 0, expense = 0;
+  list.forEach(t => { if (t.type === 'income') income += Number(t.amount); else expense += Number(t.amount); });
+  return { income, expense, balance: income - expense };
+}
+
+function walletBalance(walletId) {
+  const wallet = state.wallets.find(w => w.id === walletId);
+  if (!wallet) return 0;
+  let balance = Number(wallet.openingBalance) || 0;
+  state.transactions.forEach(t => {
+    if ((t.walletId || 'bank') !== walletId) return;
+    const amount = Number(t.amount) || 0;
+    balance += t.type === 'income' ? amount : -amount;
+  });
+  state.transfers.forEach(t => {
+    const amount = Number(t.amount) || 0;
+    if (t.fromWalletId === walletId) balance -= amount;
+    if (t.toWalletId === walletId) balance += amount;
+  });
+  return balance;
+}
+
+function totalAssets() {
+  return state.wallets.reduce((sum, w) => sum + walletBalance(w.id), 0);
+}
+
+function applyFilters(list) {
+  return list.filter(t => {
+    if (state.filters.search) {
+      const q = state.filters.search.toLowerCase().trim();
+      const title = (t.title || '').toLowerCase();
+      const notes = (t.notes || '').toLowerCase();
+      const cat = (t.category || '').toLowerCase();
+      const catTh = (Utils.categoryName(t.category) || '').toLowerCase();
+      if (!title.includes(q) && !notes.includes(q) && !cat.includes(q) && !catTh.includes(q)) return false;
+    }
+    if (state.filters.month && Utils.monthKey(t.date) !== state.filters.month) return false;
+    if (state.filters.type !== 'all' && t.type !== state.filters.type) return false;
+    if (state.filters.category !== 'all' && t.category !== state.filters.category) return false;
+    if (state.filters.wallet !== 'all' && (t.walletId || 'bank') !== state.filters.wallet) return false;
+    return true;
+  });
+}
+
+function sortedByDateDesc(list) {
+  return [...list].sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.id || '').localeCompare(a.id || ''));
+}
+
+function computeAvgMonthlyExpense() {
+  const expenses = state.transactions.filter(t => t.type === 'expense');
+  if (expenses.length === 0) return 0;
+  const byMonth = {};
+  expenses.forEach(t => {
+    const mk = Utils.monthKey(t.date);
+    byMonth[mk] = (byMonth[mk] || 0) + Number(t.amount);
+  });
+  const months = Object.keys(byMonth);
+  const total = months.reduce((s, m) => s + byMonth[m], 0);
+  return total / months.length;
+}
+
+/* ---------------------- RENDER: SUMMARY + BUDGET ---------------------- */
+function renderSummary() {
+  const { income, expense, balance } = computeTotals(state.transactions);
+  document.getElementById('totalIncome').textContent = Utils.fmtMoney(income);
+  document.getElementById('totalExpense').textContent = Utils.fmtMoney(expense);
+  const balEl = document.getElementById('totalBalance');
+  balEl.textContent = Utils.fmtMoney(balance);
+  balEl.style.color = balance < 0 ? 'var(--expense)' : 'var(--ink)';
+  document.getElementById('totalAssets').textContent = Utils.fmtMoney(totalAssets());
+  
+  const list = document.getElementById('dashboardWalletList');
+  list.innerHTML = state.wallets.map(w => {
+    const bal = walletBalance(w.id);
+    const typeLabel = w.type === 'savings' ? t('savings_wallet_type') : t('bank_wallet_type');
+    const isSavings = w.type === 'savings';
+    return `<button class="wallet-card ${w.type} text-left flex flex-col justify-between" data-wallet-tab="${w.id}">
+      <div>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <span class="wallet-badge">${isSavings ? '💰' : '🏦'}</span>
+            <div>
+              <p class="font-bold text-sm leading-tight">${escapeHTML(Utils.walletName(w.id))}</p>
+              <p class="text-[11px] text-ink-muted mt-0.5">${typeLabel}</p>
+            </div>
+          </div>
+          <span class="text-xs opacity-75 font-mono">📡 NFC</span>
+        </div>
+        <p class="figure text-2xl font-extrabold mt-4 tracking-tight">${Utils.fmtMoney(bal)}</p>
+      </div>
+      <div class="flex items-center justify-between mt-4 pt-3 border-t border-white/10 text-xs font-semibold">
+        <span class="text-ink-muted">View Wallet Details</span>
+        <span class="text-sm">→</span>
+      </div>
+    </button>`;
+  }).join('');
+  list.querySelectorAll('[data-wallet-tab]').forEach(el => el.addEventListener('click', () => showTab('wallets')));
+}
+
+function renderBudget() {
+  const monthKey = Utils.currentMonthKey();
+  document.getElementById('budgetMonthLabel').textContent = currentLang === 'th'
+    ? `การใช้จ่ายในเดือน ${Utils.monthLabel(monthKey)} เทียบกับวงเงินที่กำหนด`
+    : `Spending in ${Utils.monthLabel(monthKey)} against your limit`;
+  
+  const budgetInput = document.getElementById('budgetInput');
+  if (document.activeElement !== budgetInput) budgetInput.value = state.budget || '';
+
+  const monthExpense = state.transactions
+    .filter(t => t.type === 'expense' && Utils.monthKey(t.date) === monthKey)
+    .reduce((s, t) => s + Number(t.amount), 0);
+
+  const bar = document.getElementById('budgetBar');
+  const pctEl = document.getElementById('budgetPct');
+  const statusEl = document.getElementById('budgetStatus');
+  const alertEl = document.getElementById('budgetAlert');
+
+  if (!state.budget || state.budget <= 0) {
+    bar.style.width = '0%';
+    pctEl.textContent = '—';
+    statusEl.textContent = t('budget_empty_status');
+    alertEl.classList.add('hidden');
+    return;
+  }
+
+  const pct = Math.min(999, (monthExpense / state.budget) * 100);
+  bar.style.width = Math.min(100, pct) + '%';
+  bar.style.background = pct >= 100 ? 'var(--expense)' : pct >= 80 ? 'var(--gold)' : 'var(--income)';
+  pctEl.textContent = pct.toFixed(0) + '%';
+  statusEl.textContent = currentLang === 'th'
+    ? `ใช้จ่ายไปแล้ว ${Utils.fmtMoney(monthExpense)} จากงบ ${Utils.fmtMoney(state.budget)}`
+    : `${Utils.fmtMoney(monthExpense)} spent of ${Utils.fmtMoney(state.budget)}`;
+  
+  alertEl.classList.toggle('hidden', pct < 80);
+  alertEl.textContent = pct >= 100
+    ? `${t('budget_alert_exceed')} ${Utils.fmtMoney(monthExpense - state.budget)}`
+    : t('budget_alert_warn');
+}
+
+/* ---------------------- RENDER: TRANSACTION ROWS ---------------------- */
+function txnRowHTML(tObj) {
+  const isIncome = tObj.type === 'income';
+  const color = isIncome ? 'var(--income)' : 'var(--expense)';
+  const sign = isIncome ? '+' : '−';
+  const catColor = Utils.categoryColor(tObj.category);
+  const catName = Utils.categoryName(tObj.category);
+  return `
+    <div class="row-enter flex items-center gap-3.5 px-5 py-4 hover:bg-surface-2 cursor-pointer transition" data-edit="${tObj.id}">
+      <div class="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 text-xs font-bold shadow-sm"
+           style="background:color-mix(in srgb, ${catColor} 18%, transparent); color:${catColor}; border:1px solid color-mix(in srgb, ${catColor} 30%, transparent);">
+        ${(catName || 'OT').slice(0,2).toUpperCase()}
+      </div>
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-semibold truncate">${escapeHTML(tObj.title)}</p>
+        <p class="text-xs text-ink-muted mt-0.5">${escapeHTML(catName)} · ${Utils.walletIcon(tObj.walletId || 'bank')} ${Utils.walletName(tObj.walletId || 'bank')} · ${Utils.fmtDateHuman(tObj.date)}</p>
+      </div>
+      <p class="figure text-sm font-bold shrink-0 tracking-tight" style="color:${color}">${sign}${Utils.fmtMoney(tObj.amount)}</p>
+    </div>`;
+}
+
+function escapeHTML(s) {
+  const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML;
+}
+
+function renderRecent() {
+  const list = sortedByDateDesc(state.transactions).slice(0, 5);
+  const container = document.getElementById('recentList');
+  container.innerHTML = list.map(txnRowHTML).join('');
+  document.getElementById('recentEmpty').classList.toggle('hidden', list.length > 0);
+  container.querySelectorAll('[data-edit]').forEach(el => el.addEventListener('click', () => openModal(el.dataset.edit)));
+}
+
+function renderTransactionList() {
+  const filtered = applyFilters(state.transactions);
+  const sorted = sortedByDateDesc(filtered);
+  const container = document.getElementById('txnList');
+  container.innerHTML = sorted.map(txnRowHTML).join('');
+  document.getElementById('txnEmpty').classList.toggle('hidden', sorted.length > 0);
+  container.querySelectorAll('[data-edit]').forEach(el => el.addEventListener('click', () => openModal(el.dataset.edit)));
+}
+
+/* ---------------------- RENDER: WALLETS (LUXURY FINTECH OVERHAUL) ---------------------- */
+function renderWallets() {
+  const cards = document.getElementById('walletCards');
+  cards.innerHTML = state.wallets.map(w => {
+    const bal = walletBalance(w.id);
+    const txCount = state.transactions.filter(t => (t.walletId || 'bank') === w.id).length;
+    const transferIn = state.transfers.filter(t => t.toWalletId === w.id).reduce((s,t)=>s+Number(t.amount),0);
+    const transferOut = state.transfers.filter(t => t.fromWalletId === w.id).reduce((s,t)=>s+Number(t.amount),0);
+    const typeLabel = w.type === 'savings' ? t('savings_wallet_type') : t('bank_wallet_type');
+    const openBal = Number(w.openingBalance) || 0;
+    const isSavings = w.type === 'savings';
+
+    return `<div class="wallet-card ${w.type} flex flex-col justify-between">
+      <div>
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <span class="wallet-badge">${isSavings ? '💰' : '🏦'}</span>
+            <div>
+              <p class="font-extrabold text-base tracking-tight">${escapeHTML(Utils.walletName(w.id))}</p>
+              <p class="text-xs text-ink-muted">${typeLabel}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs px-2.5 py-1 rounded-full font-semibold" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.15);">${txCount} ${t('txns_count')}</span>
+            <span class="text-xs opacity-75 font-mono">📡</span>
+          </div>
+        </div>
+
+        <div class="mt-6">
+          <span class="text-[11px] uppercase tracking-wider font-semibold opacity-75 block">Current Balance</span>
+          <p class="figure text-3xl sm:text-4xl font-black mt-1 tracking-tight">${Utils.fmtMoney(bal)}</p>
+        </div>
+
+        <!-- Glass stats pills -->
+        <div class="grid grid-cols-3 gap-2 mt-5 p-3 rounded-2xl" style="background:rgba(0,0,0,.22); border:1px solid rgba(255,255,255,.1);">
+          <div>
+            <span class="text-[10px] uppercase font-bold text-ink-muted block tracking-wider">${t('opening_label')}</span>
+            <p class="figure text-xs font-bold mt-0.5">${Utils.fmtMoney(openBal)}</p>
+          </div>
+          <div>
+            <span class="text-[10px] uppercase font-bold text-ink-muted block tracking-wider">${t('transfer_in_label')}</span>
+            <p class="figure text-xs font-bold mt-0.5" style="color:var(--income)">+${Utils.fmtMoney(transferIn)}</p>
+          </div>
+          <div>
+            <span class="text-[10px] uppercase font-bold text-ink-muted block tracking-wider">${t('transfer_out_label')}</span>
+            <p class="figure text-xs font-bold mt-0.5" style="color:var(--expense)">-${Utils.fmtMoney(transferOut)}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="flex items-center gap-2 mt-6 pt-4 border-t border-white/15">
+        <button data-deposit-wallet="${w.id}" class="btn-action flex-1 py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition">
+          <span class="text-base leading-none">+</span> <span>${t('btn_deposit')}</span>
+        </button>
+        <button data-transfer-wallet="${w.id}" class="btn-action flex-1 py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition">
+          <span class="text-sm">↔</span> <span>${t('btn_transfer')}</span>
+        </button>
+        <button data-opening-wallet="${w.id}" title="${t('btn_set_opening')}" class="py-2.5 px-3 rounded-xl text-xs font-medium border border-white/20 hover:bg-white/10 transition">
+          ⚙
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('walletTotalAssets').textContent = Utils.fmtMoney(totalAssets());
+
+  // Attach Wallet Action Handlers
+  cards.querySelectorAll('[data-deposit-wallet]').forEach(btn => {
+    btn.addEventListener('click', () => openDepositModal(btn.dataset.depositWallet));
+  });
+  cards.querySelectorAll('[data-transfer-wallet]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openTransferModal(btn.dataset.transferWallet);
+    });
+  });
+  cards.querySelectorAll('[data-opening-wallet]').forEach(btn => {
+    btn.addEventListener('click', () => openOpeningBalanceModal(btn.dataset.openingWallet));
+  });
+
+  // Transfer history
+  const list = document.getElementById('transferList');
+  const transfers = [...state.transfers].sort((a,b)=>(b.date||'').localeCompare(a.date||'') || (b.id||'').localeCompare(a.id||''));
+  list.innerHTML = transfers.map(tr => `<div class="flex items-center justify-between gap-3 px-2 py-3 hover:bg-surface-2 rounded-card transition">
+    <div class="flex items-center gap-3 min-w-0 flex-1">
+      <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-bold" style="background:rgba(98,233,255,.15);color:var(--cyan)">↔</div>
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-medium truncate">${escapeHTML(tr.note || (currentLang === 'th' ? 'โอนเงินระหว่างกระเป๋า' : 'Wallet transfer'))}</p>
+        <p class="text-xs text-ink-muted">${Utils.walletName(tr.fromWalletId)} → ${Utils.walletName(tr.toWalletId)} · ${Utils.fmtDateHuman(tr.date)}</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 shrink-0">
+      <p class="figure text-sm font-semibold">${Utils.fmtMoney(tr.amount)}</p>
+      <button data-delete-transfer="${tr.id}" title="Delete transfer" class="w-7 h-7 flex items-center justify-center rounded text-ink-muted hover:text-expense hover:bg-surface text-xs leading-none transition">✕</button>
+    </div>
+  </div>`).join('');
+  document.getElementById('transferEmpty').classList.toggle('hidden', transfers.length > 0);
+  
+  list.querySelectorAll('[data-delete-transfer]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.deleteTransfer;
+      if (!confirm(t('prompt_delete_transfer'))) return;
+      state.transfers = state.transfers.filter(x => x.id !== id);
+      Storage.saveTransfers(state.transfers);
+      renderAll();
+      toast(t('toast_transfer_deleted'));
+    });
+  });
+}
+
+/* ---------------------- DEPOSIT MODAL LOGIC ---------------------- */
+function openDepositModal(walletId = 'bank') {
+  populateWalletSelects();
+  populateCategorySelects();
+  document.getElementById('depositWallet').value = walletId;
+  document.getElementById('depositDate').value = Utils.todayISO();
+  document.getElementById('depositAmount').value = '';
+  document.getElementById('depositTitle').value = currentLang === 'th' ? 'ฝากเงินเข้าบัญชี' : 'Cash Deposit';
+  document.getElementById('depositNote').value = '';
+  if (categories.some(c => c.key === 'Salary')) {
+    document.getElementById('depositCategory').value = 'Salary';
+  } else if (categories.length > 0) {
+    document.getElementById('depositCategory').value = categories[0].key;
+  }
+  document.getElementById('depositBackdrop').classList.remove('hidden');
+  document.getElementById('depositBackdrop').classList.add('flex');
+  setTimeout(() => document.getElementById('depositAmount').focus(), 50);
+}
+function closeDepositModal() {
+  document.getElementById('depositBackdrop').classList.add('hidden');
+  document.getElementById('depositBackdrop').classList.remove('flex');
+}
+document.getElementById('openDepositBtn').addEventListener('click', () => openDepositModal('bank'));
+document.getElementById('closeDepositBtn').addEventListener('click', closeDepositModal);
+document.getElementById('depositBackdrop').addEventListener('click', e => { if (e.target.id === 'depositBackdrop') closeDepositModal(); });
+
+document.getElementById('depositForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const walletId = document.getElementById('depositWallet').value;
+  const amount = Math.abs(parseFloat(document.getElementById('depositAmount').value) || 0);
+  if (amount <= 0) { toast('Please enter a valid amount'); return; }
+  
+  const txn = {
+    id: Utils.uid(),
+    type: 'income',
+    title: document.getElementById('depositTitle').value.trim() || (currentLang === 'th' ? 'ฝากเงิน' : 'Deposit'),
+    amount,
+    category: document.getElementById('depositCategory').value || 'Salary',
+    walletId: walletId || 'bank',
+    date: document.getElementById('depositDate').value || Utils.todayISO(),
+    notes: document.getElementById('depositNote').value.trim()
+  };
+  
+  state.transactions.push(txn);
+  Storage.saveTransactions(state.transactions);
+  closeDepositModal();
+  renderAll();
+  toast(t('toast_deposit_added'));
+});
+
+/* ---------------------- OPENING BALANCE MODAL LOGIC ---------------------- */
+function openOpeningBalanceModal(walletId) {
+  const w = state.wallets.find(x => x.id === walletId);
+  if (!w) return;
+  document.getElementById('openingWalletId').value = w.id;
+  document.getElementById('openingWalletName').textContent = `${w.type === 'savings' ? '💰' : '🏦'} ${Utils.walletName(w.id)}`;
+  document.getElementById('openingBalanceInput').value = Number(w.openingBalance) || 0;
+  document.getElementById('openingBalanceBackdrop').classList.remove('hidden');
+  document.getElementById('openingBalanceBackdrop').classList.add('flex');
+  setTimeout(() => document.getElementById('openingBalanceInput').focus(), 50);
+}
+function closeOpeningBalanceModal() {
+  document.getElementById('openingBalanceBackdrop').classList.add('hidden');
+  document.getElementById('openingBalanceBackdrop').classList.remove('flex');
+}
+document.getElementById('closeOpeningBalanceBtn').addEventListener('click', closeOpeningBalanceModal);
+document.getElementById('openingBalanceBackdrop').addEventListener('click', e => { if (e.target.id === 'openingBalanceBackdrop') closeOpeningBalanceModal(); });
+
+document.getElementById('openingBalanceForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const id = document.getElementById('openingWalletId').value;
+  const w = state.wallets.find(x => x.id === id);
+  if (!w) return;
+  w.openingBalance = Math.max(0, parseFloat(document.getElementById('openingBalanceInput').value) || 0);
+  Storage.saveWallets(state.wallets);
+  closeOpeningBalanceModal();
+  renderAll();
+  toast(t('toast_opening_saved'));
+});
+
+/* ---------------------- CATEGORY MANAGER LOGIC ---------------------- */
+function renderCategoryList() {
+  const container = document.getElementById('categoryListContainer');
+  container.innerHTML = categories.map(c => {
+    const isDefault = DEFAULT_CATEGORIES.some(dc => dc.key === c.key);
+    const label = Utils.categoryName(c.key);
+    return `<div class="flex items-center justify-between p-2 rounded-card border hover:bg-surface-2" style="border-color:var(--hairline)">
+      <div class="flex items-center gap-2.5">
+        <span class="w-3.5 h-3.5 rounded-full shrink-0" style="background:${c.color}"></span>
+        <span class="text-sm font-medium">${escapeHTML(label)}</span>
+        ${c.name_th && currentLang !== 'th' ? `<span class="text-xs text-ink-muted">(${escapeHTML(c.name_th)})</span>` : ''}
+      </div>
+      <div>
+        ${!isDefault ? `<button data-del-cat="${c.key}" class="text-xs px-2 py-1 rounded text-ink-muted hover:text-expense hover:bg-surface">${t('btn_delete')}</button>` : `<span class="text-[10px] uppercase text-ink-muted px-2 py-0.5 rounded" style="background:var(--surface-2)">Default</span>`}
+      </div>
+    </div>`;
+  }).join('');
+
+  container.querySelectorAll('[data-del-cat]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const catKey = btn.dataset.delCat;
+      categories = categories.filter(c => c.key !== catKey);
+      Storage.saveCategories(categories);
+      renderCategoryList();
+      populateCategorySelects();
+      renderAll();
+      toast(t('toast_category_deleted'));
+    });
+  });
+}
+
+function initColorPresets() {
+  const container = document.getElementById('colorPresets');
+  container.innerHTML = PRESET_COLORS.map(col => {
+    return `<button type="button" data-color="${col}" class="w-6 h-6 rounded-full border border-black/20 hover:scale-110 transition" style="background:${col}"></button>`;
+  }).join('');
+  container.querySelectorAll('[data-color]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('newCatColor').value = btn.dataset.color;
+    });
+  });
+}
+
+function openCategoryModal() {
+  renderCategoryList();
+  initColorPresets();
+  document.getElementById('newCatName').value = '';
+  document.getElementById('categoryBackdrop').classList.remove('hidden');
+  document.getElementById('categoryBackdrop').classList.add('flex');
+}
+function closeCategoryModal() {
+  document.getElementById('categoryBackdrop').classList.add('hidden');
+  document.getElementById('categoryBackdrop').classList.remove('flex');
+}
+document.getElementById('openCategoryMgrBtn').addEventListener('click', openCategoryModal);
+document.getElementById('closeCategoryBtn').addEventListener('click', closeCategoryModal);
+document.getElementById('categoryBackdrop').addEventListener('click', e => { if (e.target.id === 'categoryBackdrop') closeCategoryModal(); });
+
+document.getElementById('addCategoryForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = document.getElementById('newCatName').value.trim();
+  const color = document.getElementById('newCatColor').value;
+  if (!name) return;
+  if (categories.some(c => c.key.toLowerCase() === name.toLowerCase() || (c.name_th && c.name_th.toLowerCase() === name.toLowerCase()))) {
+    toast('Category already exists');
+    return;
+  }
+  categories.push({ key: name, name_th: name, color });
+  Storage.saveCategories(categories);
+  document.getElementById('newCatName').value = '';
+  renderCategoryList();
+  populateCategorySelects();
+  renderAll();
+  toast(t('toast_category_added'));
+});
+
+/* ---------------------- TRANSFER MODAL LOGIC ---------------------- */
+function openTransferModal(fromWalletId = null) {
+  populateWalletSelects();
+  if (fromWalletId) {
+    document.getElementById('transferFrom').value = fromWalletId;
+    const other = state.wallets.find(w => w.id !== fromWalletId);
+    if (other) document.getElementById('transferTo').value = other.id;
+  }
+  document.getElementById('transferDate').value = Utils.todayISO();
+  document.getElementById('transferAmount').value = '';
+  document.getElementById('transferNote').value = '';
+  document.getElementById('transferBackdrop').classList.remove('hidden');
+  document.getElementById('transferBackdrop').classList.add('flex');
+}
+function closeTransferModal() {
+  document.getElementById('transferBackdrop').classList.add('hidden');
+  document.getElementById('transferBackdrop').classList.remove('flex');
+}
+document.getElementById('openTransferBtn').addEventListener('click', () => openTransferModal());
+document.getElementById('closeTransferBtn').addEventListener('click', closeTransferModal);
+document.getElementById('transferBackdrop').addEventListener('click', e => { if (e.target.id === 'transferBackdrop') closeTransferModal(); });
+
+document.getElementById('transferForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const from = document.getElementById('transferFrom').value;
+  const to = document.getElementById('transferTo').value;
+  const amount = Math.abs(Number(document.getElementById('transferAmount').value) || 0);
+  if (!from || !to || from === to) { toast('Choose two different wallets'); return; }
+  if (amount <= 0) { toast('Enter a valid amount'); return; }
+  if (amount > walletBalance(from)) { toast('Not enough balance in the source wallet'); return; }
+  
+  state.transfers.push({
+    id: Utils.uid().replace(/^t_/,'x_'),
+    fromWalletId: from,
+    toWalletId: to,
+    amount,
+    date: document.getElementById('transferDate').value || Utils.todayISO(),
+    note: document.getElementById('transferNote').value.trim()
+  });
+  Storage.saveTransfers(state.transfers);
+  closeTransferModal();
+  renderAll();
+  toast(t('toast_transfer_completed'));
+});
+
+/* ---------------------- RENDER: DAILY SUMMARY ---------------------- */
+function renderDailySummary() {
+  const dateInput = document.getElementById('dailyDate');
+  const dateKey = dateInput.value || Utils.todayISO();
+  dateInput.value = dateKey;
+  const d = new Date(dateKey + 'T00:00:00');
+  const locale = currentLang === 'th' ? 'th-TH' : 'en-US';
+  document.getElementById('dailyTitle').textContent = d.toLocaleDateString(locale, { weekday:'long', month:'long', day:'numeric' });
+
+  const txns = state.transactions.filter(t => t.date === dateKey);
+  const income = txns.filter(t => t.type === 'income').reduce((s,t) => s + Number(t.amount), 0);
+  const expense = txns.filter(t => t.type === 'expense').reduce((s,t) => s + Number(t.amount), 0);
+  const net = income - expense;
+  document.getElementById('dailyIncome').textContent = Utils.fmtMoney(income);
+  document.getElementById('dailyExpense').textContent = Utils.fmtMoney(expense);
+  const netEl = document.getElementById('dailyNet');
+  netEl.textContent = Utils.fmtMoney(net);
+  netEl.style.color = net < 0 ? 'var(--expense)' : 'var(--income)';
+  document.getElementById('dailyTxnCount').textContent = `${txns.length} ${t('txns_count')}`;
+
+  const categoryTotals = {};
+  txns.filter(t => t.type === 'expense').forEach(t => { categoryTotals[t.category] = (categoryTotals[t.category] || 0) + Number(t.amount); });
+  const cats = Object.entries(categoryTotals).sort((a,b) => b[1]-a[1]);
+  const catContainer = document.getElementById('dailyCategoryList');
+  catContainer.innerHTML = cats.map(([cat, amount]) => {
+    const pct = expense ? (amount / expense * 100).toFixed(1) : 0;
+    const catName = Utils.categoryName(cat);
+    const catColor = Utils.categoryColor(cat);
+    return `<div class="py-1.5"><div class="flex items-center justify-between text-sm mb-1"><span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full" style="background:${catColor}"></span>${escapeHTML(catName)}</span><span class="figure text-ink-muted">${Utils.fmtMoney(amount)}</span></div><div class="h-1.5 rounded-full overflow-hidden" style="background:var(--surface-2)"><div class="h-full rounded-full" style="width:${pct}%;background:${catColor}"></div></div></div>`;
+  }).join('');
+  document.getElementById('dailyCategoryEmpty').classList.toggle('hidden', cats.length > 0);
+
+  const txnContainer = document.getElementById('dailyTxnList');
+  txnContainer.innerHTML = sortedByDateDesc(txns).map(txnRowHTML).join('');
+  document.getElementById('dailyTxnEmpty').classList.toggle('hidden', txns.length > 0);
+  txnContainer.querySelectorAll('[data-edit]').forEach(el => el.addEventListener('click', () => openModal(el.dataset.edit)));
+
+  const week = [];
+  for (let i=6; i>=0; i--) { const x = new Date(d); x.setDate(d.getDate()-i); const y = x.getFullYear(); const m = String(x.getMonth()+1).padStart(2,'0'); const dy = String(x.getDate()).padStart(2,'0'); week.push(`${y}-${m}-${dy}`); }
+  document.getElementById('dailyWeekList').innerHTML = week.map(day => {
+    const ex = state.transactions.filter(t => t.date === day && t.type === 'expense').reduce((s,t)=>s+Number(t.amount),0);
+    const active = day === dateKey;
+    const label = new Date(day+'T00:00:00').toLocaleDateString(locale, { weekday:'short' });
+    return `<button class="card p-3 text-left ${active ? 'ring-2' : ''}" data-day="${day}" style="${active ? 'outline:2px solid var(--gold);' : ''}"><p class="text-xs text-ink-muted">${label}</p><p class="figure text-sm font-semibold mt-1">${Utils.fmtMoney(ex)}</p><p class="text-[10px] text-ink-muted mt-1">${day.slice(5).replace('-','/')}</p></button>`;
+  }).join('');
+  document.querySelectorAll('[data-day]').forEach(btn => btn.addEventListener('click', () => { dateInput.value = btn.dataset.day; renderDailySummary(); }));
+}
+
+function shiftDailyDate(days) {
+  const input = document.getElementById('dailyDate');
+  const curr = new Date((input.value || Utils.todayISO()) + 'T00:00:00');
+  if (days === 0) {
+    input.value = Utils.todayISO();
+  } else {
+    curr.setDate(curr.getDate() + days);
+    const y = curr.getFullYear();
+    const m = String(curr.getMonth() + 1).padStart(2, '0');
+    const d = String(curr.getDate()).padStart(2, '0');
+    input.value = `${y}-${m}-${d}`;
+  }
+  renderDailySummary();
+}
+document.getElementById('dailyPrevBtn').addEventListener('click', () => shiftDailyDate(-1));
+document.getElementById('dailyNextBtn').addEventListener('click', () => shiftDailyDate(1));
+document.getElementById('dailyTodayBtn').addEventListener('click', () => shiftDailyDate(0));
+
+/* ---------------------- RENDER: ANALYTICS (PIE CHART) ---------------------- */
+let pieChart = null;
+function renderChart() {
+  const monthKey = document.getElementById('analyticsMonth').value;
+  const expenses = state.transactions.filter(t => t.type === 'expense' && (!monthKey || Utils.monthKey(t.date) === monthKey));
+
+  const totals = {};
+  expenses.forEach(t => { totals[t.category] = (totals[t.category] || 0) + Number(t.amount); });
+  const rawKeys = Object.keys(totals);
+  const labels = rawKeys.map(k => Utils.categoryName(k));
+  const data = rawKeys.map(l => totals[l]);
+  const colors = rawKeys.map(l => Utils.categoryColor(l));
+
+  document.getElementById('analyticsEmpty').classList.toggle('hidden', rawKeys.length > 0);
+
+  const legend = document.getElementById('categoryLegend');
+  const grandTotal = data.reduce((a, b) => a + b, 0);
+  legend.innerHTML = rawKeys.map((l, i) => {
+    const pct = grandTotal ? ((data[i] / grandTotal) * 100).toFixed(1) : '0.0';
+    return `<div class="flex items-center justify-between text-sm py-1.5 border-b" style="border-color:var(--hairline)">
+        <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full" style="background:${colors[i]}"></span>${escapeHTML(labels[i])}</span>
+        <span class="figure text-ink-muted">${Utils.fmtMoney(data[i])} · ${pct}%</span>
+      </div>`;
+  }).join('') || `<p class="text-sm text-ink-muted">${t('msg_no_analytics')}</p>`;
+
+  if (typeof Chart === 'undefined') return;
+  try {
+    const ctx = document.getElementById('categoryPie').getContext('2d');
+    if (pieChart) pieChart.destroy();
+    if (rawKeys.length === 0) return;
+
+    pieChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: 'transparent' }] },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '62%',
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => ` ${c.label}: ${Utils.fmtMoney(c.raw)}` } } }
+      }
+    });
+  } catch (err) {
+    console.warn('Chart render error:', err);
+  }
+}
+
+/* ---------------------- RENDER: EMERGENCY FUND ---------------------- */
+function renderEmergencyFund() {
+  const months = parseInt(document.getElementById('monthsRange').value, 10);
+  document.getElementById('monthsRangeLabel').textContent = currentLang === 'th' ? `${months} เดือน` : `${months} months`;
+  const avg = computeAvgMonthlyExpense();
+  const target = avg * months;
+  const savings = parseFloat(document.getElementById('currentSavings').value) || 0;
+  const gap = Math.max(0, target - savings);
+  const pct = target > 0 ? Math.min(100, (savings / target) * 100) : 0;
+
+  document.getElementById('avgMonthlyExpense').textContent = Utils.fmtMoney(avg);
+  document.getElementById('targetFund').textContent = Utils.fmtMoney(target);
+  document.getElementById('fundGap').textContent = Utils.fmtMoney(gap);
+  document.getElementById('fundProgressBar').style.width = pct + '%';
+  document.getElementById('fundProgressBar').style.background = pct >= 100 ? 'var(--income)' : 'var(--gold)';
+  document.getElementById('fundProgressLabel').textContent = `${pct.toFixed(0)}% ${t('funded_label')}`;
+}
+document.getElementById('monthsRange').addEventListener('input', renderEmergencyFund);
+document.getElementById('currentSavings').addEventListener('input', renderEmergencyFund);
+
+/* ---------------------- MASTER RENDER ---------------------- */
+function renderAll() {
+  renderSummary();
+  renderWallets();
+  renderBudget();
+  renderRecent();
+  renderTransactionList();
+  if (state.activeTab === 'daily') renderDailySummary();
+  if (state.activeTab === 'analytics') renderChart();
+  if (state.activeTab === 'emergency') renderEmergencyFund();
+}
+
+/* ---------------------- FILTERS ---------------------- */
+document.getElementById('filterSearch').addEventListener('input', e => { state.filters.search = e.target.value; renderTransactionList(); });
+document.getElementById('filterMonth').addEventListener('change', e => { state.filters.month = e.target.value; renderTransactionList(); });
+document.getElementById('filterType').addEventListener('change', e => { state.filters.type = e.target.value; renderTransactionList(); });
+document.getElementById('filterCategory').addEventListener('change', e => { state.filters.category = e.target.value; renderTransactionList(); });
+document.getElementById('filterWallet').addEventListener('change', e => { state.filters.wallet = e.target.value; renderTransactionList(); });
+document.getElementById('clearFiltersBtn').addEventListener('click', () => {
+  state.filters = { month: '', type: 'all', category: 'all', wallet: 'all', search: '' };
+  document.getElementById('filterSearch').value = '';
+  document.getElementById('filterMonth').value = '';
+  document.getElementById('filterType').value = 'all';
+  document.getElementById('filterCategory').value = 'all';
+  document.getElementById('filterWallet').value = 'all';
+  renderTransactionList();
+});
+document.getElementById('analyticsMonth').addEventListener('change', renderChart);
+document.getElementById('dailyDate').addEventListener('change', renderDailySummary);
+
+/* ---------------------- BUDGET INPUT ---------------------- */
+document.getElementById('budgetInput').addEventListener('input', e => {
+  state.budget = parseFloat(e.target.value) || 0;
+  Storage.saveBudget(state.budget);
+  renderBudget();
+});
+
+/* ---------------------- MODAL: ADD / EDIT ---------------------- */
+let modalMode = 'add';
+let modalType = 'expense';
+
+function setModalType(type) {
+  modalType = type;
+  document.querySelectorAll('.type-btn').forEach(btn => {
+    const active = btn.dataset.type === type;
+    const color = type === 'income' ? 'var(--income)' : 'var(--expense)';
+    btn.style.borderColor = active ? color : 'var(--hairline)';
+    btn.style.color = active ? color : 'var(--ink-muted)';
+  });
+}
+document.querySelectorAll('.type-btn').forEach(btn => btn.addEventListener('click', () => setModalType(btn.dataset.type)));
+
+function openModal(id = null, skipFocus = false) {
+  const form = document.getElementById('txnForm');
+  form.reset();
+  populateCategorySelects();
+  populateWalletSelects();
+
+  if (id) {
+    const tObj = state.transactions.find(x => x.id === id);
+    if (!tObj) return;
+    modalMode = 'edit';
+    document.getElementById('modalTitle').textContent = t('modal_edit_transaction');
+    document.getElementById('txnId').value = tObj.id;
+    document.getElementById('txnTitle').value = tObj.title;
+    document.getElementById('txnAmount').value = tObj.amount;
+    document.getElementById('txnDate').value = tObj.date;
+    document.getElementById('txnCategory').value = tObj.category;
+    document.getElementById('txnWallet').value = tObj.walletId || 'bank';
+    document.getElementById('txnNotes').value = tObj.notes || '';
+    setModalType(tObj.type);
+    document.getElementById('deleteTxnBtn').classList.remove('hidden');
+  } else {
+    modalMode = 'add';
+    document.getElementById('modalTitle').textContent = t('modal_new_transaction');
+    document.getElementById('txnId').value = '';
+    document.getElementById('txnDate').value = Utils.todayISO();
+    document.getElementById('txnWallet').value = 'bank';
+    setModalType('expense');
+    document.getElementById('deleteTxnBtn').classList.add('hidden');
+  }
+  document.getElementById('modalBackdrop').classList.remove('hidden');
+  document.getElementById('modalBackdrop').classList.add('flex');
+  if (!skipFocus) {
+    setTimeout(() => document.getElementById('txnTitle').focus(), 50);
+  }
+}
+function closeModal() {
+  document.getElementById('modalBackdrop').classList.add('hidden');
+  document.getElementById('modalBackdrop').classList.remove('flex');
+}
+document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+document.getElementById('modalBackdrop').addEventListener('click', e => { if (e.target.id === 'modalBackdrop') closeModal(); });
+document.getElementById('openAddModalBtn').addEventListener('click', () => openModal());
+
+document.getElementById('txnForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const id = document.getElementById('txnId').value;
+  const payload = {
+    id: id || Utils.uid(),
+    type: modalType,
+    title: document.getElementById('txnTitle').value.trim() || 'Untitled',
+    amount: Math.abs(parseFloat(document.getElementById('txnAmount').value) || 0),
+    category: document.getElementById('txnCategory').value,
+    walletId: document.getElementById('txnWallet').value || 'bank',
+    date: document.getElementById('txnDate').value || Utils.todayISO(),
+    notes: document.getElementById('txnNotes').value.trim(),
+  };
+  if (id) {
+    const idx = state.transactions.findIndex(t => t.id === id);
+    if (idx > -1) state.transactions[idx] = payload;
+    toast(t('toast_txn_saved'));
+  } else {
+    state.transactions.push(payload);
+    toast(t('toast_txn_saved'));
+  }
+  Storage.saveTransactions(state.transactions);
+  closeModal();
+  renderAll();
+});
+
+document.getElementById('deleteTxnBtn').addEventListener('click', () => {
+  const id = document.getElementById('txnId').value;
+  if (!id) return;
+  if (!confirm(t('prompt_delete_txn'))) return;
+  state.transactions = state.transactions.filter(t => t.id !== id);
+  Storage.saveTransactions(state.transactions);
+  closeModal();
+  renderAll();
+  toast(t('toast_txn_deleted'));
+});
+
+/* ---------------------- QUICK ADD ---------------------- */
+function handleQuickAdd() {
+  const input = document.getElementById('quickAddInput');
+  const text = input.value.trim();
+  if (!text) return;
+  const { title, amount } = Utils.parseQuickAdd(text);
+  openModal(null, true);
+  document.getElementById('txnTitle').value = title;
+  if (amount !== '') document.getElementById('txnAmount').value = amount;
+  input.value = '';
+  if (amount !== '') {
+    document.getElementById('txnCategory').focus();
+  } else {
+    document.getElementById('txnAmount').focus();
+  }
+}
+document.getElementById('quickAddBtn').addEventListener('click', handleQuickAdd);
+document.getElementById('quickAddInput').addEventListener('keydown', e => { if (e.key === 'Enter') handleQuickAdd(); });
+
+/* ---------------------- CSV EXPORT ---------------------- */
+function exportCSV() {
+  const rows = [['Date', 'Type', 'Title', 'Category', 'Wallet / From', 'To Wallet', 'Amount', 'Notes']];
+  sortedByDateDesc(state.transactions).forEach(t => {
+    rows.push([t.date, t.type, t.title, Utils.categoryName(t.category), Utils.walletName(t.walletId || 'bank'), '', t.amount, (t.notes || '').replace(/[\r\n]+/g, ' ')]);
+  });
+  [...state.transfers].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).forEach(t => {
+    rows.push([t.date, 'transfer', t.note || 'Wallet transfer', '', Utils.walletName(t.fromWalletId), Utils.walletName(t.toWalletId), t.amount, '']);
+  });
+  const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `ledger-transactions-${Utils.todayISO()}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast(t('toast_csv_exported'));
+}
+document.getElementById('exportCsvBtn').addEventListener('click', exportCSV);
+
+/* ---------------------- BACKUP & RESTORE ---------------------- */
+function openBackupModal() {
+  document.getElementById('backupBackdrop').classList.remove('hidden');
+  document.getElementById('backupBackdrop').classList.add('flex');
+}
+function closeBackupModal() {
+  document.getElementById('backupBackdrop').classList.add('hidden');
+  document.getElementById('backupBackdrop').classList.remove('flex');
+}
+document.getElementById('backupBtn').addEventListener('click', openBackupModal);
+document.getElementById('closeBackupBtn').addEventListener('click', closeBackupModal);
+document.getElementById('backupBackdrop').addEventListener('click', e => { if (e.target.id === 'backupBackdrop') closeBackupModal(); });
+
+document.getElementById('downloadBackupBtn').addEventListener('click', () => {
+  const data = {
+    version: '6.1',
+    exportDate: new Date().toISOString(),
+    transactions: state.transactions,
+    transfers: state.transfers,
+    wallets: state.wallets,
+    categories: categories,
+    budget: state.budget,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `ledger-backup-${Utils.todayISO()}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast(t('toast_backup_downloaded'));
+});
+
+document.getElementById('restoreFileInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    try {
+      const data = JSON.parse(evt.target.result);
+      if (!Array.isArray(data.transactions) && !Array.isArray(data.wallets)) {
+        toast('Invalid backup file format');
+        return;
+      }
+      if (confirm(t('prompt_restore'))) {
+        if (Array.isArray(data.transactions)) state.transactions = data.transactions;
+        if (Array.isArray(data.transfers)) state.transfers = data.transfers;
+        if (Array.isArray(data.wallets)) state.wallets = data.wallets;
+        if (Array.isArray(data.categories)) categories = data.categories;
+        if (typeof data.budget === 'number') state.budget = data.budget;
+        Storage.saveTransactions(state.transactions);
+        Storage.saveTransfers(state.transfers);
+        Storage.saveWallets(state.wallets);
+        Storage.saveCategories(categories);
+        Storage.saveBudget(state.budget);
+        populateCategorySelects();
+        populateWalletSelects();
+        renderAll();
+        closeBackupModal();
+        toast(t('toast_data_restored'));
+      }
+    } catch (err) {
+      toast('Failed to parse backup JSON file');
+    }
+  };
+  reader.readAsText(file);
+});
+
+document.getElementById('resetDataBtn').addEventListener('click', () => {
+  if (confirm(t('prompt_reset_all'))) {
+    localStorage.removeItem(LS_KEYS.transactions);
+    localStorage.removeItem(LS_KEYS.transfers);
+    localStorage.removeItem(LS_KEYS.wallets);
+    localStorage.removeItem(LS_KEYS.budget);
+    state.transactions = [];
+    state.transfers = [];
+    state.wallets = [
+      { id: 'bank', name: 'Bank Wallet', type: 'bank', openingBalance: 0 },
+      { id: 'savings', name: 'Savings Wallet', type: 'savings', openingBalance: 0 },
+    ];
+    state.budget = 0;
+    Storage.saveTransactions(state.transactions);
+    Storage.saveTransfers(state.transfers);
+    Storage.saveWallets(state.wallets);
+    Storage.saveBudget(state.budget);
+    populateWalletSelects();
+    renderAll();
+    closeBackupModal();
+    toast(t('toast_all_reset'));
+  }
+});
+
+/* ---------------------- KEYBOARD SHORTCUTS ---------------------- */
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeModal();
+    closeTransferModal();
+    closeDepositModal();
+    closeOpeningBalanceModal();
+    closeCategoryModal();
+    closeBackupModal();
+  }
+});
+
+/* ---------------------- INIT ---------------------- */
+(function init() {
+  currentLang = Storage.getLang();
+  document.getElementById('analyticsMonth').value = Utils.currentMonthKey();
+  document.getElementById('dailyDate').value = Utils.todayISO();
+  applyLanguage();
+})();
+</script>
+</body>
+</html>
