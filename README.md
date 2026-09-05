@@ -1,8 +1,8 @@
-# 💎 Ledger — Personal Finance Tracker (v6.2 Pro)
+# 💎 Ledger — Personal Finance Tracker (v6.3 Pro)
 
 <div align="center">
 
-![Ledger Banner](https://img.shields.io/badge/Ledger-v6.2%20Pro-6366F1?style=for-the-badge&logo=wallet)
+![Ledger Banner](https://img.shields.io/badge/Ledger-v6.3%20Pro-6366F1?style=for-the-badge&logo=wallet)
 ![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)
 ![Offline First](https://img.shields.io/badge/Offline--First-100%25-10B981?style=for-the-badge)
 ![Languages](https://img.shields.io/badge/Language-TH%20%7C%20EN-F59E0B?style=for-the-badge)
@@ -62,6 +62,21 @@
 * **Thai Typography**: `Prompt` (Google Fonts) — modern geometric loopless sans-serif widely used in modern fintech apps.
 * **English Typography**: `Plus Jakarta Sans` & `Inter`.
 * **Financial Figures**: `JetBrains Mono` for precise tabular numeric alignment.
+
+### 🚀 10. Quality of Life (QoL) Suite
+* **📋 Duplicate Transaction**: 1-click copy of any transaction to easily log recurring expenses (e.g. daily coffee, meals) with today's date.
+* **🧠 Smart Memory**: Automatically remembers and pre-selects your last-used wallet, category, and type for seamless new entries.
+* **⌨️ Global Keyboard Shortcuts**:
+  * `N` or `+`: Open New Transaction modal from any tab.
+  * `Ctrl + Enter` / `Cmd + Enter`: Submit & save active form.
+  * `1` – `6`: Quick jump between tabs (Dashboard, Transactions, Wallets, Daily, Analytics, Emergency).
+  * `Esc`: Close open modal or deselect rows.
+* **📊 Filtered Live Summary**: Real-time summary bar displaying item count, total income, total expense, and net cash flow of filtered search results.
+* **⚡ Quick Date Presets**: Instant 1-click date filters (`All Time`, `Today`, `Yesterday`, `This Week`, `This Month`, `Last Month`).
+* **☑️ Bulk Selection & Batch Delete**: Select multiple rows with master checkbox and delete simultaneously in one confirmed batch.
+* **🧮 Inline Math Calculator & Quick Adders**: Type arithmetic expressions directly into Amount inputs (`50+20+45`, `120*3`) with 1-tap quick increment pills (`+10`, `+50`, `+100`, `+500`, `+1k`).
+* **🤖 Smart Auto-Category by Title**: Intelligently infers and auto-selects categories and transaction types based on keywords in your item title (e.g. food, gas, bills, shopping).
+* **🔄 Multi-Criteria Sorting**: Sort records by Date (Newest/Oldest) or by Amount (Highest/Lowest) to pinpoint largest financial outflows in one click.
 
 ---
 

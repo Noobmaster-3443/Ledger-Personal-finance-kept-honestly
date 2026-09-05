@@ -422,7 +422,7 @@
           </h1>
           <span class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider"
                 style="background:color-mix(in srgb, var(--accent) 15%, transparent); color:var(--accent); border:1px solid color-mix(in srgb, var(--accent) 30%, transparent);">
-            v6.2 Pro
+            v6.3 Pro
           </span>
         </div>
         <p class="text-[11px] text-ink-muted mt-0.5 hidden sm:block" data-i18n="app_tagline">Personal finance, kept honestly</p>
@@ -628,6 +628,19 @@
       </button>
     </div>
 
+    <!-- Quick Date Presets -->
+    <div class="flex items-center gap-1.5 overflow-x-auto pb-1">
+      <span class="text-xs text-ink-muted font-semibold mr-1 flex items-center gap-1 shrink-0">
+        <span>⏱️</span> <span data-i18n="quick_dates">Period:</span>
+      </span>
+      <button data-date-preset="all" class="date-preset-btn text-xs font-semibold px-3 py-1.5 rounded-xl border transition" style="background:var(--accent);color:#FFFFFF;border-color:var(--accent);" data-i18n="preset_all">All Time</button>
+      <button data-date-preset="today" class="date-preset-btn text-xs font-medium px-3 py-1.5 rounded-xl border hover:bg-surface-2 transition" style="border-color:var(--hairline);" data-i18n="preset_today">Today</button>
+      <button data-date-preset="yesterday" class="date-preset-btn text-xs font-medium px-3 py-1.5 rounded-xl border hover:bg-surface-2 transition" style="border-color:var(--hairline);" data-i18n="preset_yesterday">Yesterday</button>
+      <button data-date-preset="this_week" class="date-preset-btn text-xs font-medium px-3 py-1.5 rounded-xl border hover:bg-surface-2 transition" style="border-color:var(--hairline);" data-i18n="preset_this_week">This Week</button>
+      <button data-date-preset="this_month" class="date-preset-btn text-xs font-medium px-3 py-1.5 rounded-xl border hover:bg-surface-2 transition" style="border-color:var(--hairline);" data-i18n="preset_this_month">This Month</button>
+      <button data-date-preset="last_month" class="date-preset-btn text-xs font-medium px-3 py-1.5 rounded-xl border hover:bg-surface-2 transition" style="border-color:var(--hairline);" data-i18n="preset_last_month">Last Month</button>
+    </div>
+
     <!-- Filters -->
     <div class="card p-4 flex flex-wrap gap-3 items-end">
       <div class="flex-1 min-w-[160px]">
@@ -656,14 +669,60 @@
         <label class="text-xs text-ink-muted block mb-1" data-i18n="filter_wallet">Wallet</label>
         <select id="filterWallet" class="px-3 py-2 rounded-md text-sm"></select>
       </div>
+      <div>
+        <label class="text-xs text-ink-muted block mb-1" data-i18n="filter_sort">Sort</label>
+        <select id="filterSort" class="px-3 py-2 rounded-md text-sm">
+          <option value="date_desc" data-i18n="sort_date_desc">Date: Newest</option>
+          <option value="date_asc" data-i18n="sort_date_asc">Date: Oldest</option>
+          <option value="amount_desc" data-i18n="sort_amount_desc">Amount: Highest</option>
+          <option value="amount_asc" data-i18n="sort_amount_asc">Amount: Lowest</option>
+        </select>
+      </div>
       <button id="clearFiltersBtn" class="text-xs text-ink-muted hover:underline pb-2" data-i18n="clear_filters">Clear filters</button>
       
       <div class="ml-auto flex items-center gap-2">
         <button id="openCategoryMgrBtn" title="Manage categories / จัดการหมวดหมู่" class="px-3 py-2 rounded-card border hover:bg-surface-2 text-xs font-semibold" style="border-color:var(--hairline);">
           🎨 <span data-i18n="btn_manage_categories">Categories</span>
         </button>
-        <button id="openAddModalBtn" class="btn-primary px-4 py-2.5 rounded-card text-sm font-semibold">
+        <button id="openAddModalBtn" class="btn-primary px-4 py-2.5 rounded-card text-sm font-semibold flex items-center gap-1.5">
           <span data-i18n="btn_new_transaction">+ New Transaction</span>
+          <kbd class="hidden md:inline-block px-1.5 py-0.2 rounded text-[10px] font-mono bg-white/20 text-white">N</kbd>
+        </button>
+      </div>
+    </div>
+
+    <!-- Filtered Live Summary & Batch Actions -->
+    <div class="card p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <label class="flex items-center gap-1.5 cursor-pointer font-semibold select-none">
+          <input type="checkbox" id="selectAllTxnCheckbox" class="w-4 h-4 rounded border cursor-pointer accent-indigo-600" />
+          <span data-i18n="select_all">Select all</span>
+        </label>
+        <span class="text-ink-muted">·</span>
+        <span class="text-ink-muted flex items-center gap-1">
+          <span data-i18n="summary_found">Found:</span>
+          <strong id="filteredCount" class="text-ink figure font-bold">0</strong>
+        </span>
+        <span class="text-ink-muted">·</span>
+        <span class="text-ink-muted flex items-center gap-1">
+          <span data-i18n="summary_income">Income:</span>
+          <strong id="filteredIncome" class="figure font-bold" style="color:var(--income)">+฿0.00</strong>
+        </span>
+        <span class="text-ink-muted">·</span>
+        <span class="text-ink-muted flex items-center gap-1">
+          <span data-i18n="summary_expense">Expense:</span>
+          <strong id="filteredExpense" class="figure font-bold" style="color:var(--expense)">-฿0.00</strong>
+        </span>
+        <span class="text-ink-muted">·</span>
+        <span class="text-ink-muted flex items-center gap-1">
+          <span data-i18n="summary_net">Net:</span>
+          <strong id="filteredNet" class="figure font-bold">฿0.00</strong>
+        </span>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button id="batchDeleteBtn" class="hidden px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white transition flex items-center gap-1.5 shadow-sm" style="background:var(--expense);">
+          <span>🗑️</span> <span id="batchDeleteText">Delete Selected (0)</span>
         </button>
       </div>
     </div>
@@ -860,8 +919,19 @@
 
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="text-xs text-ink-muted block mb-1" data-i18n="form_amount">Amount (฿)</label>
-          <input id="txnAmount" required type="number" min="0.01" step="0.01" placeholder="0.00" class="figure w-full px-3 py-2 rounded-md text-sm" />
+          <label class="text-xs text-ink-muted block mb-1 flex items-center justify-between">
+            <span data-i18n="form_amount">Amount (฿)</span>
+            <span class="text-[10px] text-ink-muted opacity-75 font-mono" title="Type e.g. 50+20+45">🧮 Math OK</span>
+          </label>
+          <input id="txnAmount" required type="text" inputmode="decimal" placeholder="0.00 or 50+20" class="figure w-full px-3 py-2 rounded-md text-sm" />
+          <!-- Quick add amount pills -->
+          <div class="flex items-center gap-1 mt-1.5 overflow-x-auto">
+            <button type="button" class="quick-add-amount-btn text-[10px] px-1.5 py-0.5 rounded border font-semibold hover:bg-surface-2 transition" style="border-color:var(--hairline);" data-add="10">+10</button>
+            <button type="button" class="quick-add-amount-btn text-[10px] px-1.5 py-0.5 rounded border font-semibold hover:bg-surface-2 transition" style="border-color:var(--hairline);" data-add="50">+50</button>
+            <button type="button" class="quick-add-amount-btn text-[10px] px-1.5 py-0.5 rounded border font-semibold hover:bg-surface-2 transition" style="border-color:var(--hairline);" data-add="100">+100</button>
+            <button type="button" class="quick-add-amount-btn text-[10px] px-1.5 py-0.5 rounded border font-semibold hover:bg-surface-2 transition" style="border-color:var(--hairline);" data-add="500">+500</button>
+            <button type="button" class="quick-add-amount-btn text-[10px] px-1.5 py-0.5 rounded border font-semibold hover:bg-surface-2 transition" style="border-color:var(--hairline);" data-add="1000">+1k</button>
+          </div>
         </div>
         <div>
           <label class="text-xs text-ink-muted block mb-1" data-i18n="form_date">Date</label>
@@ -1239,7 +1309,31 @@ const I18N = {
     prompt_delete_txn: "Delete this transaction? This cannot be undone.",
     prompt_delete_transfer: "Delete this transfer? Wallet balances will be recalculated.",
     prompt_reset_all: "Clear all transactions and reset all wallet balances & budget to 0?",
-    prompt_restore: "Restore data from this file? This will merge/replace existing data."
+    prompt_restore: "Restore data from this file? This will merge/replace existing data.",
+
+    // QoL Features
+    quick_dates: "Period:",
+    preset_all: "All Time",
+    preset_today: "Today",
+    preset_yesterday: "Yesterday",
+    preset_this_week: "This Week",
+    preset_this_month: "This Month",
+    preset_last_month: "Last Month",
+    select_all: "Select all",
+    summary_found: "Found:",
+    summary_income: "Income:",
+    summary_expense: "Expense:",
+    summary_net: "Net:",
+    btn_duplicate: "Duplicate",
+    btn_delete_selected: "Delete Selected",
+    toast_txn_duplicated: "Transaction duplicated with today's date!",
+    toast_batch_deleted: "Selected transaction(s) deleted",
+    prompt_batch_delete: "Delete selected transaction(s)? This cannot be undone.",
+    filter_sort: "Sort",
+    sort_date_desc: "Date: Newest",
+    sort_date_asc: "Date: Oldest",
+    sort_amount_desc: "Amount: Highest",
+    sort_amount_asc: "Amount: Lowest"
   },
   th: {
     app_tagline: "บันทึกรายรับรายจ่ายอย่างตรงไปตรงมา",
@@ -1410,7 +1504,31 @@ const I18N = {
     prompt_delete_txn: "ต้องการลบรายการนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้",
     prompt_delete_transfer: "ต้องการลบรายการโอนเงินนี้ใช่หรือไม่? ยอดในกระเป๋าจะถูกคำนวณใหม่",
     prompt_reset_all: "ต้องการล้างรายการทั้งหมดและรีเซ็ตยอดทุกกระเป๋าเป็น 0 ใช่หรือไม่?",
-    prompt_restore: "ต้องการกู้คืนข้อมูลจากไฟล์นี้ใช่หรือไม่? ข้อมูลปัจจุบันจะถูกแทนที่"
+    prompt_restore: "ต้องการกู้คืนข้อมูลจากไฟล์นี้ใช่หรือไม่? ข้อมูลปัจจุบันจะถูกแทนที่",
+
+    // QoL Features
+    quick_dates: "ช่วงเวลา:",
+    preset_all: "ทั้งหมด",
+    preset_today: "วันนี้",
+    preset_yesterday: "เมื่อวาน",
+    preset_this_week: "สัปดาห์นี้",
+    preset_this_month: "เดือนนี้",
+    preset_last_month: "เดือนที่แล้ว",
+    select_all: "เลือกทั้งหมด",
+    summary_found: "พบ:",
+    summary_income: "รายรับ:",
+    summary_expense: "รายจ่าย:",
+    summary_net: "สุทธิ:",
+    btn_duplicate: "ทำซ้ำ",
+    btn_delete_selected: "ลบที่เลือก",
+    toast_txn_duplicated: "ทำซ้ำรายการเป็นของวันนี้เรียบร้อย!",
+    toast_batch_deleted: "ลบรายการที่เลือกเรียบร้อยแล้ว",
+    prompt_batch_delete: "ต้องการลบรายการที่เลือกใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้",
+    filter_sort: "จัดเรียง",
+    sort_date_desc: "วันที่: ล่าสุด ➡️ เก่าสุด",
+    sort_date_asc: "วันที่: เก่าสุด ➡️ ล่าสุด",
+    sort_amount_desc: "ยอดเงิน: มาก ➡️ น้อย",
+    sort_amount_asc: "ยอดเงิน: น้อย ➡️ มาก"
   }
 };
 
@@ -1439,7 +1557,10 @@ const LS_KEYS = {
   wallets: 'ledger_wallets',
   transfers: 'ledger_transfers',
   categories: 'ledger_categories',
-  lang: 'ledger_language'
+  lang: 'ledger_language',
+  lastWallet: 'ledger_last_wallet',
+  lastCategory: 'ledger_last_category',
+  lastType: 'ledger_last_type'
 };
 
 /* ---------------------- STORAGE MODULE ---------------------- */
@@ -1499,17 +1620,30 @@ const Storage = {
   },
   saveLang(l) {
     localStorage.setItem(LS_KEYS.lang, l);
+  },
+  getLastChoices() {
+    return {
+      walletId: localStorage.getItem(LS_KEYS.lastWallet) || 'bank',
+      category: localStorage.getItem(LS_KEYS.lastCategory) || (categories[0]?.key || 'Food'),
+      type: localStorage.getItem(LS_KEYS.lastType) || 'expense'
+    };
+  },
+  saveLastChoices(walletId, category, type) {
+    if (walletId) localStorage.setItem(LS_KEYS.lastWallet, walletId);
+    if (category) localStorage.setItem(LS_KEYS.lastCategory, category);
+    if (type) localStorage.setItem(LS_KEYS.lastType, type);
   }
 };
 
 /* ---------------------- STATE ---------------------- */
 let categories = Storage.getCategories();
+let selectedTxnIds = new Set();
 let state = {
   transactions: Storage.getTransactions(),
   transfers: Storage.getTransfers(),
   wallets: Storage.getWallets(),
   budget: Storage.getBudget(),
-  filters: { month: '', type: 'all', category: 'all', wallet: 'all', search: '' },
+  filters: { month: '', type: 'all', category: 'all', wallet: 'all', search: '', datePreset: 'all', sort: 'date_desc' },
   activeTab: 'dashboard',
 };
 
@@ -1545,9 +1679,30 @@ const Utils = {
     const v = Number(n) || 0;
     return (v < 0 ? '-฿' : '฿') + Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   },
+  evalMathExpr(str) {
+    if (!str) return 0;
+    const clean = String(str).replace(/[^\d+\-*/.]/g, '').trim();
+    if (!clean) return 0;
+    try {
+      if (/^[\d.]+(?:[+\-*/][\d.]+)*$/.test(clean)) {
+        const res = Function('"use strict"; return (' + clean + ')')();
+        return isFinite(res) && !isNaN(res) ? Math.max(0, res) : 0;
+      }
+    } catch {}
+    const parsed = parseFloat(clean);
+    return isNaN(parsed) ? 0 : Math.max(0, parsed);
+  },
   monthKey(dateStr) { return dateStr ? dateStr.slice(0, 7) : ''; },
   todayISO() {
     const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  },
+  yesterdayISO() {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
@@ -1558,6 +1713,26 @@ const Utils = {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
     return `${y}-${m}`;
+  },
+  lastMonthKey() {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  },
+  isThisWeek(dateStr) {
+    if (!dateStr) return false;
+    const d = new Date(dateStr + 'T00:00:00');
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    const day = (now.getDay() + 6) % 7; // Monday as 0
+    startOfWeek.setDate(now.getDate() - day);
+    startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+    return d >= startOfWeek && d <= endOfWeek;
   },
   fmtDateHuman(dateStr) {
     if (!dateStr) return '';
@@ -1573,12 +1748,12 @@ const Utils = {
     return d.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
   },
   parseQuickAdd(text) {
-    const match = text.trim().match(/^(.*?)[\s]+(\d+(\.\d+)?)$/);
+    const match = text.trim().match(/^(.*?)[\s]+([\d+\-*/.]+)$/);
     if (match) {
-      return { title: match[1].trim() || 'Untitled', amount: parseFloat(match[2]) };
+      return { title: match[1].trim() || 'Untitled', amount: Utils.evalMathExpr(match[2]) || '' };
     }
-    const onlyNum = text.trim().match(/^(\d+(\.\d+)?)$/);
-    if (onlyNum) return { title: '', amount: parseFloat(onlyNum[1]) };
+    const onlyNum = text.trim().match(/^([\d+\-*/.]+)$/);
+    if (onlyNum) return { title: '', amount: Utils.evalMathExpr(onlyNum[1]) || '' };
     return { title: text.trim(), amount: '' };
   },
   categoryName(key) {
@@ -1603,6 +1778,51 @@ const Utils = {
     return w && w.type === 'savings' ? '💰' : '🏦';
   }
 };
+
+/* ---------------------- AUTO CATEGORY RULES ---------------------- */
+const AUTO_CATEGORY_RULES = [
+  {
+    cat: 'Food',
+    type: 'expense',
+    keywords: ['ข้าว', 'อาหาร', 'กิน', 'กาแฟ', 'ชา', 'cafe', 'coffee', 'ชาบู', 'หมูกระทะ', 'ส้มตำ', 'ก๋วยเตี๋ยว', 'เตี๋ยว', 'kfc', 'mcdonald', 'เซเว่น', '7-11', '7-eleven', 'บุฟเฟต์', 'ขนม', 'เบียร์', 'เหล้า', 'มื้อ', 'lunch', 'dinner', 'breakfast', 'pizza', 'sushi', 'บะหมี่', 'เนื้อ', 'ไก่', 'หมู', 'มาม่า', 'starbucks', 'amazon']
+  },
+  {
+    cat: 'Transport',
+    type: 'expense',
+    keywords: ['น้ำมัน', 'bts', 'mrt', 'grab', 'bolt', 'แท็กซี่', 'taxi', 'รถเมล์', 'วิน', 'ทางด่วน', 'จอดรถ', 'ตั๋วเครื่องบิน', 'รถไฟ', 'เครื่องบิน', 'gasoline', 'fuel', 'เติมน้ำมัน', 'มอเตอร์ไซค์', 'ล้างรถ', 'ซ่อมรถ']
+  },
+  {
+    cat: 'Bills',
+    type: 'expense',
+    keywords: ['ค่าไฟ', 'ค่าน้ำ', 'ค่าเน็ต', 'เน็ต', 'wifi', 'คอนโด', 'ค่าหอ', 'ค่าเช่า', 'ประกัน', 'บัตรเครดิต', 'งวด', 'netflix', 'spotify', 'youtube', 'bill', 'ไฟ', 'น้ำประปา', 'ส่วนกลาง']
+  },
+  {
+    cat: 'Shopping',
+    type: 'expense',
+    keywords: ['ช้อป', 'เสื้อ', 'กางเกง', 'shopee', 'lazada', 'tiktok shop', 'สั่งของ', 'รองเท้า', 'กระเป๋า', 'uniqlo', 'zara', 'h&m', 'เครื่องสำอาง', 'ซื้อของ']
+  },
+  {
+    cat: 'Entertainment',
+    type: 'expense',
+    keywords: ['หนัง', 'ตั๋วหนัง', 'โรงหนัง', 'เกม', 'game', 'steam', 'playstation', 'nintendo', 'เที่ยว', 'คอนเสิร์ต', 'karaoke', 'คาราโอเกะ', 'disney', 'ของเล่น']
+  },
+  {
+    cat: 'Salary',
+    type: 'income',
+    keywords: ['เงินเดือน', 'salary', 'โบนัส', 'bonus', 'จ้าง', 'ปันผล', 'กำไร', 'ขายของ', 'เบี้ยเลี้ยง', 'income', 'รายได้', 'เงินเข้า']
+  }
+];
+
+function guessCategory(title) {
+  if (!title) return null;
+  const lower = title.toLowerCase().trim();
+  for (const rule of AUTO_CATEGORY_RULES) {
+    if (rule.keywords.some(k => lower.includes(k.toLowerCase()))) {
+      return rule;
+    }
+  }
+  return null;
+}
 
 /* ---------------------- LANGUAGE SWITCHER ---------------------- */
 function applyLanguage() {
@@ -1796,12 +2016,70 @@ function applyFilters(list) {
     if (state.filters.type !== 'all' && t.type !== state.filters.type) return false;
     if (state.filters.category !== 'all' && t.category !== state.filters.category) return false;
     if (state.filters.wallet !== 'all' && (t.walletId || 'bank') !== state.filters.wallet) return false;
+    
+    // Quick Date Presets
+    if (state.filters.datePreset && state.filters.datePreset !== 'all') {
+      const p = state.filters.datePreset;
+      if (p === 'today' && t.date !== Utils.todayISO()) return false;
+      if (p === 'yesterday' && t.date !== Utils.yesterdayISO()) return false;
+      if (p === 'this_week' && !Utils.isThisWeek(t.date)) return false;
+      if (p === 'this_month' && Utils.monthKey(t.date) !== Utils.currentMonthKey()) return false;
+      if (p === 'last_month' && Utils.monthKey(t.date) !== Utils.lastMonthKey()) return false;
+    }
     return true;
   });
 }
 
 function sortedByDateDesc(list) {
   return [...list].sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.id || '').localeCompare(a.id || ''));
+}
+
+function sortTransactions(list) {
+  const sortMode = state.filters.sort || 'date_desc';
+  return [...list].sort((a, b) => {
+    if (sortMode === 'date_desc') {
+      return (b.date || '').localeCompare(a.date || '') || (b.id || '').localeCompare(a.id || '');
+    }
+    if (sortMode === 'date_asc') {
+      return (a.date || '').localeCompare(b.date || '') || (a.id || '').localeCompare(b.id || '');
+    }
+    if (sortMode === 'amount_desc') {
+      return (Number(b.amount) || 0) - (Number(a.amount) || 0) || (b.date || '').localeCompare(a.date || '');
+    }
+    if (sortMode === 'amount_asc') {
+      return (Number(a.amount) || 0) - (Number(b.amount) || 0) || (b.date || '').localeCompare(a.date || '');
+    }
+    return 0;
+  });
+}
+
+function duplicateTransaction(id) {
+  const orig = state.transactions.find(t => t.id === id);
+  if (!orig) return;
+  const copy = {
+    ...orig,
+    id: Utils.uid(),
+    title: orig.title,
+    date: Utils.todayISO(),
+  };
+  state.transactions.unshift(copy);
+  Storage.saveTransactions(state.transactions);
+  Storage.saveLastChoices(copy.walletId, copy.category, copy.type);
+  renderAll();
+  toast(t('toast_txn_duplicated'));
+}
+
+function deleteSelectedTransactions() {
+  if (selectedTxnIds.size === 0) return;
+  const count = selectedTxnIds.size;
+  const confirmMsg = (t('prompt_batch_delete') || 'Delete selected transaction(s)?').replace('{n}', count);
+  if (!confirm(confirmMsg)) return;
+
+  state.transactions = state.transactions.filter(t => !selectedTxnIds.has(t.id));
+  selectedTxnIds.clear();
+  Storage.saveTransactions(state.transactions);
+  renderAll();
+  toast(t('toast_batch_deleted'));
 }
 
 function computeAvgMonthlyExpense() {
@@ -1896,23 +2174,37 @@ function renderBudget() {
 }
 
 /* ---------------------- RENDER: TRANSACTION ROWS ---------------------- */
-function txnRowHTML(tObj) {
+function txnRowHTML(tObj, isSelected = false) {
   const isIncome = tObj.type === 'income';
   const color = isIncome ? 'var(--income)' : 'var(--expense)';
   const sign = isIncome ? '+' : '−';
   const catColor = Utils.categoryColor(tObj.category);
   const catName = Utils.categoryName(tObj.category);
+  const checkedAttr = isSelected ? 'checked' : '';
   return `
-    <div class="row-enter flex items-center gap-3.5 px-5 py-4 hover:bg-surface-2 cursor-pointer transition" data-edit="${tObj.id}">
-      <div class="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 text-xs font-bold shadow-sm"
+    <div class="row-enter group flex items-center gap-3 px-4 sm:px-5 py-3.5 hover:bg-surface-2 transition select-none" data-row-id="${tObj.id}">
+      <input type="checkbox" data-select-id="${tObj.id}" ${checkedAttr}
+        class="w-4 h-4 rounded border cursor-pointer accent-indigo-600 shrink-0" />
+      <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center shrink-0 text-xs font-bold shadow-sm cursor-pointer"
+           data-edit="${tObj.id}"
            style="background:color-mix(in srgb, ${catColor} 18%, transparent); color:${catColor}; border:1px solid color-mix(in srgb, ${catColor} 30%, transparent);">
         ${(catName || 'OT').slice(0,2).toUpperCase()}
       </div>
-      <div class="min-w-0 flex-1">
+      <div class="min-w-0 flex-1 cursor-pointer" data-edit="${tObj.id}">
         <p class="text-sm font-semibold truncate">${escapeHTML(tObj.title)}</p>
         <p class="text-xs text-ink-muted mt-0.5">${escapeHTML(catName)} · ${Utils.walletIcon(tObj.walletId || 'bank')} ${Utils.walletName(tObj.walletId || 'bank')} · ${Utils.fmtDateHuman(tObj.date)}</p>
       </div>
-      <p class="figure text-sm font-bold shrink-0 tracking-tight" style="color:${color}">${sign}${Utils.fmtMoney(tObj.amount)}</p>
+      <div class="flex items-center gap-2 shrink-0">
+        <p class="figure text-sm font-bold tracking-tight text-right mr-1" style="color:${color}">${sign}${Utils.fmtMoney(tObj.amount)}</p>
+        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button data-duplicate="${tObj.id}" title="${t('btn_duplicate')}" class="p-1.5 rounded-lg hover:bg-surface border text-xs text-ink-muted hover:text-ink transition" style="border-color:var(--hairline);">
+            📋
+          </button>
+          <button data-edit="${tObj.id}" title="${t('modal_edit_transaction')}" class="p-1.5 rounded-lg hover:bg-surface border text-xs text-ink-muted hover:text-ink transition" style="border-color:var(--hairline);">
+            ✏️
+          </button>
+        </div>
+      </div>
     </div>`;
 }
 
@@ -1923,18 +2215,86 @@ function escapeHTML(s) {
 function renderRecent() {
   const list = sortedByDateDesc(state.transactions).slice(0, 5);
   const container = document.getElementById('recentList');
-  container.innerHTML = list.map(txnRowHTML).join('');
+  container.innerHTML = list.map(tObj => txnRowHTML(tObj, false)).join('');
   document.getElementById('recentEmpty').classList.toggle('hidden', list.length > 0);
-  container.querySelectorAll('[data-edit]').forEach(el => el.addEventListener('click', () => openModal(el.dataset.edit)));
+  container.querySelectorAll('[data-edit]').forEach(el => el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openModal(el.dataset.edit);
+  }));
+  container.querySelectorAll('[data-duplicate]').forEach(el => el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    duplicateTransaction(el.dataset.duplicate);
+  }));
 }
 
 function renderTransactionList() {
   const filtered = applyFilters(state.transactions);
-  const sorted = sortedByDateDesc(filtered);
+  const sorted = sortTransactions(filtered);
   const container = document.getElementById('txnList');
-  container.innerHTML = sorted.map(txnRowHTML).join('');
+
+  // Compute live filtered totals
+  const totalIncome = filtered.filter(t => t.type === 'income').reduce((s,t) => s + Number(t.amount), 0);
+  const totalExpense = filtered.filter(t => t.type === 'expense').reduce((s,t) => s + Number(t.amount), 0);
+  const net = totalIncome - totalExpense;
+
+  const fCount = document.getElementById('filteredCount');
+  if (fCount) fCount.textContent = `${filtered.length}`;
+  const fInc = document.getElementById('filteredIncome');
+  if (fInc) fInc.textContent = `+${Utils.fmtMoney(totalIncome)}`;
+  const fExp = document.getElementById('filteredExpense');
+  if (fExp) fExp.textContent = `-${Utils.fmtMoney(totalExpense)}`;
+  const fNet = document.getElementById('filteredNet');
+  if (fNet) {
+    fNet.textContent = (net >= 0 ? '+' : '') + Utils.fmtMoney(net);
+    fNet.style.color = net < 0 ? 'var(--expense)' : 'var(--income)';
+  }
+
+  // Update batch delete button
+  const batchBtn = document.getElementById('batchDeleteBtn');
+  const batchTxt = document.getElementById('batchDeleteText');
+  if (batchBtn && batchTxt) {
+    if (selectedTxnIds.size > 0) {
+      batchBtn.classList.remove('hidden');
+      batchTxt.textContent = `${t('btn_delete_selected')} (${selectedTxnIds.size})`;
+    } else {
+      batchBtn.classList.add('hidden');
+    }
+  }
+
+  // Update select all checkbox state
+  const selectAllBox = document.getElementById('selectAllTxnCheckbox');
+  if (selectAllBox) {
+    const allFilteredSelected = filtered.length > 0 && filtered.every(t => selectedTxnIds.has(t.id));
+    selectAllBox.checked = allFilteredSelected;
+    selectAllBox.indeterminate = selectedTxnIds.size > 0 && !allFilteredSelected;
+  }
+
+  container.innerHTML = sorted.map(tObj => txnRowHTML(tObj, selectedTxnIds.has(tObj.id))).join('');
   document.getElementById('txnEmpty').classList.toggle('hidden', sorted.length > 0);
-  container.querySelectorAll('[data-edit]').forEach(el => el.addEventListener('click', () => openModal(el.dataset.edit)));
+
+  // Attach event handlers
+  container.querySelectorAll('[data-edit]').forEach(el => el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openModal(el.dataset.edit);
+  }));
+
+  container.querySelectorAll('[data-duplicate]').forEach(el => el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    duplicateTransaction(el.dataset.duplicate);
+  }));
+
+  container.querySelectorAll('[data-select-id]').forEach(box => box.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const id = box.dataset.selectId;
+    if (box.checked) selectedTxnIds.add(id);
+    else selectedTxnIds.delete(id);
+    renderTransactionList();
+  }));
+
+  container.querySelectorAll('[data-row-id]').forEach(row => row.addEventListener('click', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+    openModal(row.dataset.rowId);
+  }));
 }
 
 /* ---------------------- RENDER: WALLETS (LUXURY FINTECH OVERHAUL) ---------------------- */
@@ -2391,23 +2751,84 @@ function renderAll() {
   if (state.activeTab === 'emergency') renderEmergencyFund();
 }
 
-/* ---------------------- FILTERS ---------------------- */
+/* ---------------------- FILTERS & DATE PRESETS ---------------------- */
+function updateDatePresetButtons(activePreset) {
+  document.querySelectorAll('.date-preset-btn').forEach(btn => {
+    const isAct = btn.dataset.datePreset === activePreset;
+    if (isAct) {
+      btn.style.background = 'var(--accent)';
+      btn.style.color = '#FFFFFF';
+      btn.style.borderColor = 'var(--accent)';
+      btn.classList.add('font-semibold');
+      btn.classList.remove('font-medium');
+    } else {
+      btn.style.background = 'transparent';
+      btn.style.color = 'var(--ink)';
+      btn.style.borderColor = 'var(--hairline)';
+      btn.classList.remove('font-semibold');
+      btn.classList.add('font-medium');
+    }
+  });
+}
+
+document.querySelectorAll('.date-preset-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const preset = btn.dataset.datePreset;
+    state.filters.datePreset = preset;
+    if (preset !== 'all' && preset !== 'this_month' && preset !== 'last_month') {
+      document.getElementById('filterMonth').value = '';
+      state.filters.month = '';
+    } else if (preset === 'this_month') {
+      document.getElementById('filterMonth').value = Utils.currentMonthKey();
+      state.filters.month = Utils.currentMonthKey();
+    } else if (preset === 'last_month') {
+      document.getElementById('filterMonth').value = Utils.lastMonthKey();
+      state.filters.month = Utils.lastMonthKey();
+    }
+    updateDatePresetButtons(preset);
+    renderTransactionList();
+  });
+});
+
 document.getElementById('filterSearch').addEventListener('input', e => { state.filters.search = e.target.value; renderTransactionList(); });
-document.getElementById('filterMonth').addEventListener('change', e => { state.filters.month = e.target.value; renderTransactionList(); });
+document.getElementById('filterMonth').addEventListener('change', e => {
+  state.filters.month = e.target.value;
+  state.filters.datePreset = 'all';
+  updateDatePresetButtons('all');
+  renderTransactionList();
+});
 document.getElementById('filterType').addEventListener('change', e => { state.filters.type = e.target.value; renderTransactionList(); });
 document.getElementById('filterCategory').addEventListener('change', e => { state.filters.category = e.target.value; renderTransactionList(); });
 document.getElementById('filterWallet').addEventListener('change', e => { state.filters.wallet = e.target.value; renderTransactionList(); });
+document.getElementById('filterSort').addEventListener('change', e => {
+  state.filters.sort = e.target.value;
+  renderTransactionList();
+});
 document.getElementById('clearFiltersBtn').addEventListener('click', () => {
-  state.filters = { month: '', type: 'all', category: 'all', wallet: 'all', search: '' };
+  state.filters = { month: '', type: 'all', category: 'all', wallet: 'all', search: '', datePreset: 'all', sort: 'date_desc' };
   document.getElementById('filterSearch').value = '';
   document.getElementById('filterMonth').value = '';
   document.getElementById('filterType').value = 'all';
   document.getElementById('filterCategory').value = 'all';
   document.getElementById('filterWallet').value = 'all';
+  document.getElementById('filterSort').value = 'date_desc';
+  updateDatePresetButtons('all');
   renderTransactionList();
 });
 document.getElementById('analyticsMonth').addEventListener('change', renderChart);
 document.getElementById('dailyDate').addEventListener('change', renderDailySummary);
+
+// Select All & Batch Delete
+document.getElementById('selectAllTxnCheckbox').addEventListener('change', (e) => {
+  const filtered = applyFilters(state.transactions);
+  if (e.target.checked) {
+    filtered.forEach(t => selectedTxnIds.add(t.id));
+  } else {
+    filtered.forEach(t => selectedTxnIds.delete(t.id));
+  }
+  renderTransactionList();
+});
+document.getElementById('batchDeleteBtn').addEventListener('click', deleteSelectedTransactions);
 
 /* ---------------------- BUDGET INPUT ---------------------- */
 document.getElementById('budgetInput').addEventListener('input', e => {
@@ -2419,6 +2840,7 @@ document.getElementById('budgetInput').addEventListener('input', e => {
 /* ---------------------- MODAL: ADD / EDIT ---------------------- */
 let modalMode = 'add';
 let modalType = 'expense';
+let userManuallyChangedCategory = false;
 
 function setModalType(type) {
   modalType = type;
@@ -2431,9 +2853,46 @@ function setModalType(type) {
 }
 document.querySelectorAll('.type-btn').forEach(btn => btn.addEventListener('click', () => setModalType(btn.dataset.type)));
 
+// Auto-Category suggestion from Title
+document.getElementById('txnCategory').addEventListener('change', () => {
+  userManuallyChangedCategory = true;
+});
+document.getElementById('txnTitle').addEventListener('input', (e) => {
+  if (userManuallyChangedCategory) return;
+  const match = guessCategory(e.target.value);
+  if (match) {
+    if (categories.some(c => c.key === match.cat)) {
+      document.getElementById('txnCategory').value = match.cat;
+    }
+    setModalType(match.type);
+  }
+});
+
+// Quick Add Amount Pill Buttons
+document.querySelectorAll('.quick-add-amount-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const addVal = parseFloat(btn.dataset.add) || 0;
+    const input = document.getElementById('txnAmount');
+    const current = Utils.evalMathExpr(input.value) || 0;
+    const next = current + addVal;
+    input.value = next % 1 === 0 ? String(next) : next.toFixed(2);
+  });
+});
+
+// Inline Math Evaluation on Amount blur
+document.getElementById('txnAmount').addEventListener('blur', (e) => {
+  const val = e.target.value.trim();
+  if (!val) return;
+  const res = Utils.evalMathExpr(val);
+  if (res > 0) {
+    e.target.value = res % 1 === 0 ? String(res) : res.toFixed(2);
+  }
+});
+
 function openModal(id = null, skipFocus = false) {
   const form = document.getElementById('txnForm');
   form.reset();
+  userManuallyChangedCategory = false;
   populateCategorySelects();
   populateWalletSelects();
 
@@ -2451,13 +2910,20 @@ function openModal(id = null, skipFocus = false) {
     document.getElementById('txnNotes').value = tObj.notes || '';
     setModalType(tObj.type);
     document.getElementById('deleteTxnBtn').classList.remove('hidden');
+    userManuallyChangedCategory = true;
   } else {
     modalMode = 'add';
     document.getElementById('modalTitle').textContent = t('modal_new_transaction');
     document.getElementById('txnId').value = '';
     document.getElementById('txnDate').value = Utils.todayISO();
-    document.getElementById('txnWallet').value = 'bank';
-    setModalType('expense');
+
+    // Smart Memory: remember last choices
+    const last = Storage.getLastChoices();
+    document.getElementById('txnWallet').value = last.walletId || 'bank';
+    if (last.category && categories.some(c => c.key === last.category)) {
+      document.getElementById('txnCategory').value = last.category;
+    }
+    setModalType(last.type || 'expense');
     document.getElementById('deleteTxnBtn').classList.add('hidden');
   }
   document.getElementById('modalBackdrop').classList.remove('hidden');
@@ -2477,11 +2943,13 @@ document.getElementById('openAddModalBtn').addEventListener('click', () => openM
 document.getElementById('txnForm').addEventListener('submit', e => {
   e.preventDefault();
   const id = document.getElementById('txnId').value;
+  const rawAmt = document.getElementById('txnAmount').value;
+  const parsedAmt = Utils.evalMathExpr(rawAmt);
   const payload = {
     id: id || Utils.uid(),
     type: modalType,
     title: document.getElementById('txnTitle').value.trim() || 'Untitled',
-    amount: Math.abs(parseFloat(document.getElementById('txnAmount').value) || 0),
+    amount: Math.abs(parsedAmt || 0),
     category: document.getElementById('txnCategory').value,
     walletId: document.getElementById('txnWallet').value || 'bank',
     date: document.getElementById('txnDate').value || Utils.todayISO(),
@@ -2496,6 +2964,8 @@ document.getElementById('txnForm').addEventListener('submit', e => {
     toast(t('toast_txn_saved'));
   }
   Storage.saveTransactions(state.transactions);
+  // Remember user's last selected wallet, category, and type
+  Storage.saveLastChoices(payload.walletId, payload.category, payload.type);
   closeModal();
   renderAll();
 });
@@ -2505,6 +2975,7 @@ document.getElementById('deleteTxnBtn').addEventListener('click', () => {
   if (!id) return;
   if (!confirm(t('prompt_delete_txn'))) return;
   state.transactions = state.transactions.filter(t => t.id !== id);
+  selectedTxnIds.delete(id);
   Storage.saveTransactions(state.transactions);
   closeModal();
   renderAll();
@@ -2565,7 +3036,7 @@ document.getElementById('backupBackdrop').addEventListener('click', e => { if (e
 
 document.getElementById('downloadBackupBtn').addEventListener('click', () => {
   const data = {
-    version: '6.1',
+    version: '6.3',
     exportDate: new Date().toISOString(),
     transactions: state.transactions,
     transfers: state.transfers,
@@ -2643,6 +3114,9 @@ document.getElementById('resetDataBtn').addEventListener('click', () => {
 
 /* ---------------------- KEYBOARD SHORTCUTS ---------------------- */
 window.addEventListener('keydown', (e) => {
+  const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+  
+  // Esc closes all modals & deselects all rows
   if (e.key === 'Escape') {
     closeModal();
     closeTransferModal();
@@ -2650,6 +3124,49 @@ window.addEventListener('keydown', (e) => {
     closeOpeningBalanceModal();
     closeCategoryModal();
     closeBackupModal();
+    if (selectedTxnIds.size > 0) {
+      selectedTxnIds.clear();
+      renderTransactionList();
+    }
+    return;
+  }
+
+  // Ctrl + Enter or Cmd + Enter submits the active open modal
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    if (!document.getElementById('modalBackdrop').classList.contains('hidden')) {
+      e.preventDefault();
+      document.getElementById('txnForm').requestSubmit();
+    } else if (document.getElementById('depositBackdrop') && !document.getElementById('depositBackdrop').classList.contains('hidden')) {
+      e.preventDefault();
+      document.getElementById('depositForm').requestSubmit();
+    } else if (document.getElementById('transferBackdrop') && !document.getElementById('transferBackdrop').classList.contains('hidden')) {
+      e.preventDefault();
+      document.getElementById('transferForm').requestSubmit();
+    } else if (document.getElementById('openingBalanceBackdrop') && !document.getElementById('openingBalanceBackdrop').classList.contains('hidden')) {
+      e.preventDefault();
+      document.getElementById('openingBalanceForm').requestSubmit();
+    }
+    return;
+  }
+
+  // If inside an input field, do not trigger single-letter or number navigation
+  if (isInput) return;
+
+  // 'N' or '+' opens new transaction modal
+  if (e.key === 'n' || e.key === 'N' || e.key === '+') {
+    e.preventDefault();
+    openModal();
+    return;
+  }
+
+  // 1-6 quick tab switch
+  const tabs = ['dashboard', 'transactions', 'wallets', 'daily', 'analytics', 'emergency'];
+  if (e.key >= '1' && e.key <= '6') {
+    const idx = parseInt(e.key, 10) - 1;
+    if (tabs[idx]) {
+      e.preventDefault();
+      showTab(tabs[idx]);
+    }
   }
 });
 
